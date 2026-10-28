@@ -1,0 +1,12 @@
+{
+  "name": "indonesia-travel-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Indonesia Travel Platform: partner sites, Maidaa console, financing portal and platform admin on one shared backend.",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "test": "npm run test:engine && npm run test:db",
+    "test:engine": "npm --workspace @itp/money-engine test",
+    "test:db": "bash scripts/test-db.sh"
+  }
+}
