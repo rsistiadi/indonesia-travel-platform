@@ -9,7 +9,7 @@ export function PartnerAdmin({ slug }: { slug: string }) {
   const p = api.partners().find((x) => x.slug === slug);
   const me = api.me();
   return (
-    <div style={{ ['--acc' as string]: p?.color }}>
+    <div>
       <div className="top"><div className="wrap"><span className="brand"><span className="dot" />{t('Portal admin')} · {p?.name ?? slug}</span><span className="grow" /><a href={`#/p/${slug}`}>{t('Lihat situs pembeli')}</a></div></div>
       <main className="wrap">
         <Gate roles={['partner_admin']}>

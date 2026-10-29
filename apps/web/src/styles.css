@@ -53,3 +53,19 @@ td.num,th.num{text-align:right}
 .tile{display:block;text-decoration:none;color:inherit}.tile:hover{border-color:var(--acc)}
 @media(max-width:560px){.hide-sm{display:none}h1{font-size:1.35rem}}
 .bad{color:var(--bad-ink)}
+
+/* Buyer site: Primkop IDI red and white (palette from the approved mockups) */
+.buyer{--bg:#faf9f5;--panel:#fff;--ink:#1a1918;--mut:#6b6a68;--line:#e5e3dd;--acc:#CC1B1B;--ok:#fde8e8;--warn:#fdf7ed;--warn-ink:#7a5a14;--blue:#fde8e8;--blue-ink:#9b1414;
+ min-height:100vh;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.buyer .top{background:#fff;border-bottom:1px solid var(--line)}
+.buyer .brand img{border-radius:50%;display:block}
+.buyer .brand{font-weight:800}
+.buyer h1,.buyer h2{letter-spacing:-.01em}
+.buyer .badge.green{background:#e3f4ef;color:#0b6b5c}.buyer .badge.gray{background:#f0eee9;color:#4a4845}
+.buyer .btn.primary:hover{background:#b01717}.buyer .btn.soft{background:#fde8e8;color:#9b1414}
+.buyer .sum .t{color:var(--acc);font-size:1.15rem}
+.buyer a{color:var(--acc)}.buyer .pk .price{color:var(--acc)}
+.buyer .hero h1{font-size:1.9rem}
+.buyer .tile:hover{border-color:var(--acc)}
+.buyer .maiya,.buyer .card{background:#fff}.buyer .bub{background:#f5f4f0}.buyer .bub.me{background:var(--acc)}
+.buyer .top a{text-decoration:none;font-weight:600}

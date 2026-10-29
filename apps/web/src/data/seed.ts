@@ -7,16 +7,13 @@ export function seedState(): State {
     seq: 1050,
     users: [
       { id: 'u-siti', name: 'dr. Siti Rahma', role: 'buyer', phone: '0811 2233 4455' },
-      { id: 'u-andi', name: 'Andi Pratama', role: 'buyer', phone: '0812 9988 7766' },
       { id: 'u-idi', name: 'Admin Primkop IDI', role: 'partner_admin', partnerId: 'p-idi' },
-      { id: 'u-budi', name: 'dr. Budi', role: 'partner_admin', partnerId: 'p-budi' },
       { id: 'u-maidaa', name: 'Tim Maidaa', role: 'maidaa_staff' },
       { id: 'u-amitra', name: 'Analis Amitra', role: 'financier_analyst', financierId: 'f-amitra' },
       { id: 'u-platform', name: 'Admin Platform', role: 'platform_admin' },
     ],
     partners: [
-      { id: 'p-idi', slug: 'idi', name: 'Primkop IDI', kind: 'organization', eligibility: 'manual', allowCodes: true, active: true, color: '#0f6b57', roster: [] },
-      { id: 'p-budi', slug: 'budi', name: 'dr. Budi', kind: 'individual', eligibility: 'none', allowCodes: true, active: true, color: '#8a5a12', roster: [] },
+      { id: 'p-idi', slug: 'idi', name: 'Primkop IDI', kind: 'organization', eligibility: 'manual', allowCodes: true, active: true, color: '#CC1B1B', roster: [] },
     ],
     packages: [
       { id: 'k-eco', code: 'ECO', name: 'Umrah Hemat 9 Hari', category: 'umrah', cls: 'economy', days: 9, summaryId: 'Umrah 9 hari, hotel bintang 4 dekat Masjidil Haram, pembimbing berpengalaman.', summaryEn: '9-day umrah, 4-star hotels near Masjidil Haram, experienced guide.', includes: ['Tiket pesawat', 'Hotel Makkah & Madinah', 'Visa', 'Muthawif', 'Perlengkapan'], taxClass: 'pure_umrah', status: 'published' },
@@ -32,11 +29,9 @@ export function seedState(): State {
     agreements: [
       { id: 'a1', partnerId: 'p-idi', packageId: 'k-eco', price: 28900000, marketRef: 29500000, mode: 'pct_of_net', pct: 60, fixed: 0, status: 'live', maidaaAt: now(), partnerAt: now(), liveFrom: now(), createdAt: now() },
       { id: 'a2', partnerId: 'p-idi', packageId: 'k-hrm', price: 40000000, marketRef: 42000000, mode: 'pct_of_net', pct: 50, fixed: 0, status: 'live', maidaaAt: now(), partnerAt: now(), liveFrom: now(), createdAt: now() },
-      { id: 'a3', partnerId: 'p-budi', packageId: 'k-eco', price: 29500000, marketRef: 29500000, mode: 'fixed_per_pax', pct: 0, fixed: 1000000, status: 'live', maidaaAt: now(), partnerAt: now(), liveFrom: now(), createdAt: now() },
     ],
     codes: [
       { id: 'c1', partnerId: 'p-idi', code: 'IDI-2026', mode: 'idr', value: 500000, ownerPhone: null, allowSelf: true, active: true },
-      { id: 'c2', partnerId: 'p-budi', code: 'BUDI-A7', mode: 'idr', value: 300000, ownerPhone: '0812 3456 7890', allowSelf: false, active: true },
     ],
     members: [], orders: [], payments: [], fin: [],
     tax: [{ id: 't1', name: 'Pajak margin (PLACEHOLDER)', taxType: 'placeholder', taxClass: null, base: 'margin', ratePct: 11, from: '2026-01-01', to: null, status: 'active', placeholder: true, note: 'Bukan tarif resmi. Ganti setelah angka dikonfirmasi.' }],

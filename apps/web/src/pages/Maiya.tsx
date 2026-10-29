@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { api } from '../data/api.ts';
+import { useApi } from '../core.tsx';
 import { rp, t, fdate } from '../i18n.ts';
 import { run } from '../core.tsx';
 
 /** Mockup of the assistant panel. Scripted answers only: the real AI comes in a later phase. */
 export function Maiya({ pid, partnerName }: { pid: string; partnerName: string }) {
+  useApi();
   const [open, setOpen] = useState(false);
+  const me = api.me();
+  const hello = me?.role === 'buyer' ? t('Assalamualaikum, {0}. ', me.name) : t('Assalamualaikum. ');
+  const intro = hello + t('Saya Maiya, asisten {0}. Saya bisa membantu soal harga, kursi, pembayaran, dan dokumen. Ini masih contoh jawaban otomatis, belum AI sungguhan.', partnerName);
   const [msgs, setMsgs] = useState<{ me: boolean; text: string }[]>([]);
   const [text, setText] = useState('');
   const reply = (q: string): string => {
@@ -16,7 +21,7 @@ export function Maiya({ pid, partnerName }: { pid: string; partnerName: string }
     if (/dokumen|paspor|passport|visa|document/.test(s)) return t('Siapkan paspor yang berlaku minimal 8 bulan. Tim Maidaa akan memandu dokumen lain setelah pembayaran.');
     if (/batal|refund|cancel/.test(s)) return t('Kebijakan pembatalan masih disusun bersama Maidaa. Silakan hubungi tim kami lewat tombol di bawah.');
     if (/haji|hajj/.test(s)) return t('Haji khusus segera hadir. Informasi menyusul.');
-    return t('Saya Maiya, asisten {0}. Saya bisa membantu soal harga, kursi, pembayaran, dan dokumen. Ini masih contoh jawaban otomatis, belum AI sungguhan.', partnerName);
+    return t('Saya bisa membantu soal harga, kursi, pembayaran, dan dokumen. Coba salah satu tombol di bawah.');
   };
   const send = (q: string) => { if (!q.trim()) return; setMsgs((m) => [...m, { me: true, text: q }, { me: false, text: reply(q) }]); setText(''); };
   const human = () => run(() => { api.openTicket('support', msgs.filter((m) => m.me).map((m) => m.text).join(' | ') || t('Minta dihubungi'), null, pid); }, 'Permintaan dikirim ke tim.');
@@ -25,7 +30,7 @@ export function Maiya({ pid, partnerName }: { pid: string; partnerName: string }
     <aside className="maiya" aria-label="Maiya">
       <header><strong>Maiya</strong><button className="btn ghost sm" onClick={() => setOpen(false)}>{t('Tutup')}</button></header>
       <div className="msgs">
-        {!msgs.length && <div className="bub">{t('Assalamualaikum! Ada yang bisa saya bantu?')}</div>}
+        <div className="bub">{intro}</div>
         {msgs.map((m, i) => <div key={i} className={`bub${m.me ? ' me' : ''}`}>{m.text}</div>)}
       </div>
       <div className="chips">{['Berapa harga paket?', 'Sisa kursi', 'Cara bayar', 'Dokumen'].map((c) => <button key={c} onClick={() => send(t(c))}>{t(c)}</button>)}<button onClick={human}>{t('Hubungi tim')}</button></div>

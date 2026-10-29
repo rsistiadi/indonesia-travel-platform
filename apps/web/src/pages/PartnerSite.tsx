@@ -10,9 +10,9 @@ export function PartnerSite({ slug, sub }: { slug: string; sub: string[] }) {
   const p = api.partnerBySlug(slug);
   if (!p) return <div className="wrap"><Card title={t('Situs tidak ditemukan')}><p>{t('Alamat mitra ini tidak aktif.')}</p></Card></div>;
   return (
-    <div style={{ ['--acc' as string]: p.color }}>
+    <div className="buyer">
       <div className="top"><div className="wrap">
-        <a className="brand" href={`#/p/${slug}`}><span className="dot" />{p.name}</a>
+        <a className="brand" href={`#/p/${slug}`}>{slug === 'idi' ? <img src="idi-logo.png" alt="" width={40} height={40} /> : <span className="dot" />}{p.name}</a>
         <span className="mut sm hide-sm">{t('dengan Maidaa Umrah Services')}</span>
         <span className="grow" />
         <a href={`#/p/${slug}`}>{t('Paket')}</a>
@@ -48,7 +48,6 @@ function SignInPrompt({ p, staffNote }: { p: Partner; staffNote: boolean }) {
         <p>{t('Mode contoh: pilih akun pembeli.')}</p>
         <div className="row">
           <Button onClick={() => { api.signIn('u-siti'); go('/p/idi'); }}>dr. Siti Rahma</Button>
-          <Button kind="ghost" onClick={() => { api.signIn('u-andi'); go('/p/budi'); }}>Andi Pratama</Button>
         </div>
       </Card>
       <PublicList p={p} />

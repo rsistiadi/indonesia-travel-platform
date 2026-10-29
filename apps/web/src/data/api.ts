@@ -41,9 +41,8 @@ export class Api {
   private fresh(): T.State {
     const prev = this.s; const st = seedState(); this.s = st; this.system = true;
     // sample members and orders so every console has something to review
-    const mk = (id: string, pid: string, name: string, no: string, st2: T.Member['status']): T.Member => ({ id, partnerId: pid, userId: id === 'm-siti' ? 'u-siti' : id === 'm-andi' ? 'u-andi' : 'x-' + id, memberNo: no, name, phone: '0811', relation: 'member', status: st2, at: now() });
-    st.members.push(mk('m-siti', 'p-idi', 'dr. Siti Rahma', 'IDI-0412', 'approved'), mk('m-andi', 'p-budi', 'Andi Pratama', '', 'approved'),
-      mk('m-ahmad', 'p-idi', 'dr. Ahmad Fauzi', 'IDI-0990', 'pending'), mk('m-lina', 'p-idi', 'dr. Lina Marlina', 'IDI-1180', 'approved'));
+    const mk = (id: string, pid: string, name: string, no: string, st2: T.Member['status']): T.Member => ({ id, partnerId: pid, userId: id === 'm-siti' ? 'u-siti' : 'x-' + id, memberNo: no, name, phone: '0811', relation: 'member', status: st2, at: now() });
+    st.members.push(mk('m-siti', 'p-idi', 'dr. Siti Rahma', 'IDI-0412', 'approved'), mk('m-ahmad', 'p-idi', 'dr. Ahmad Fauzi', 'IDI-0990', 'pending'), mk('m-lina', 'p-idi', 'dr. Lina Marlina', 'IDI-1180', 'approved'));
     const mkOrder = (m: string, dep: string, pax: number, method: 'transfer' | 'financing', code: string | null, finish?: 'payment_review' | 'paid') => {
       const o = this._place({ memberId: m, departureId: dep, pax, method, codeText: code, tenor: method === 'financing' ? 24 : undefined });
       if (finish === 'payment_review' || finish === 'paid') {
@@ -55,7 +54,6 @@ export class Api {
     mkOrder('m-lina', 'd-eco1', 2, 'transfer', 'IDI-2026', 'paid');
     mkOrder('m-lina', 'd-hrm1', 1, 'transfer', null, 'payment_review');
     mkOrder('m-siti', 'd-eco2', 1, 'financing', null);
-    mkOrder('m-andi', 'd-eco1', 2, 'transfer', null);
     this.system = false; this.s = prev ?? st; return st;
   }
   reset() { this.s = this.fresh(); this.emit(); }

@@ -73,7 +73,7 @@ export function DemoBar() {
         const id = e.target.value || null; api.signIn(id); const u = api.users().find((x) => x.id === id);
         if (!u) return go('/');
         if (u.role === 'partner_admin') go('/admin/' + api.partners().find((p) => p.id === u.partnerId)?.slug);
-        else if (u.role === 'buyer') go(u.id === 'u-andi' ? '/p/budi' : '/p/idi');
+        else if (u.role === 'buyer') go('/p/idi');
         else go(ROLE_HOME[u.role]);
       }}>
         <option value="">{t('Belum masuk (tamu)')}</option>

@@ -5,7 +5,6 @@ import { api } from '../data/api.ts';
 export function Home() {
   const sites: [string, string, string][] = [
     ['#/p/idi', 'Situs mitra: Primkop IDI', 'Pembeli (anggota IDI dan keluarga) memilih paket, memesan, dan membayar.'],
-    ['#/p/budi', 'Situs mitra: dr. Budi', 'Contoh mitra perorangan dengan harga dan komisi sendiri.'],
     ['#/admin/idi', 'Portal admin mitra', 'Mitra menyetujui anggota, mengatur harga bersama Maidaa, dan melihat komisi.'],
     ['#/maidaa', 'Konsol Maidaa', 'Pemantauan penjualan, verifikasi pembayaran, kursi, harga dasar, dan pembagian margin.'],
     ['#/financier', 'Portal mitra pembiayaan', 'Amitra memeriksa dan memutuskan pengajuan pembiayaan.'],
