@@ -7,3 +7,5 @@ node_modules/
 dist/
 .netlify/
 .pgdata/
+node_modules
+dist

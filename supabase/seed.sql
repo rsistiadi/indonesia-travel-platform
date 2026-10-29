@@ -22,7 +22,7 @@ insert into public.discount_codes (partner_id, code, mode, value, owner_phone, a
  ('a0000000-0000-0000-0000-000000000002', 'BUDI-A7',  'idr', 300000, '081234567890', false);
 
 insert into public.tax_rules (name, tax_type, tax_class, liable, base, rate_pct, effective_from, status, placeholder, source_note) values
- ('PLACEHOLDER margin tax', 'placeholder', null, 'platform', 'margin', 13.5, '2026-01-01', 'active', true, 'Not a real rate. Replace when confirmed.');
+ ('PLACEHOLDER margin tax', 'placeholder', null, 'platform', 'margin', 11, '2026-01-01', 'active', true, 'Not a real rate. Replace when confirmed.');
 
 insert into public.platform_settings (key, value) values
  ('fees',      '{"transfer":25000,"card_pct":2,"financing_pool":500000}'),
