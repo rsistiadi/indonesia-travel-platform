@@ -1,4 +1,5 @@
 export const EN: Record<string, string> = {
+ "Masuk sebagai pembeli untuk menghubungi tim.": "Sign in as a buyer to contact the team.",
  "Biaya transfer (Rp)": "Transfer fee (Rp)",
  "Biaya kartu (%)": "Card fee (%)",
  "Biaya pembiayaan ke margin (Rp)": "Financing fee charged to margin (Rp)",

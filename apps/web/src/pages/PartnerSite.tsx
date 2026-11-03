@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../data/api.ts';
-import { Badge, Button, Card, Empty, Field, OrderBadge, go, run, useApi } from '../core.tsx';
-import { dyn, fdate, fdt, rp, t, jt } from '../i18n.ts';
+import { Badge, Button, Card, Empty, Field, MoneyInput, OrderBadge, go, run, useApi } from '../core.tsx';
+import { dyn, fdate, fdt, rp, t } from '../i18n.ts';
 import { Maiya } from './Maiya.tsx';
 import type { Partner } from '../data/types.ts';
 
@@ -189,7 +189,7 @@ function OrderPage({ p, id }: { p: Partner; id: string }) {
         {payable && (
           <Card title={t('Kirim bukti pembayaran')}>
             <p className="sm mut">{t('Transfer ke rekening Maidaa (nomor rekening resmi akan ditampilkan di sini). Lalu unggah bukti.')}</p>
-            <Field label={t('Jumlah (Rp)')} hint={`${t('Sisa tagihan')}: ${rp(remaining)}`}><input type="number" value={amount || remaining} onChange={(e) => setAmount(+e.target.value)} /></Field>
+            <Field label={t('Jumlah (Rp)')} hint={`${t('Sisa tagihan')}: ${rp(remaining)}`}><MoneyInput value={amount || remaining} onChange={setAmount} /></Field>
             <Field label={t('Bukti transfer')}><input type="file" accept="image/*,.pdf" onChange={(e) => setProof(e.target.files?.[0]?.name ?? '')} /></Field>
             <Button disabled={!proof} onClick={() => run(() => { const a = amount || remaining; api.submitPayment(o.id, a, a >= remaining ? 'full' : 'dp', proof); setProof(''); setAmount(0); }, 'Bukti terkirim, menunggu pemeriksaan Maidaa.')}>{t('Kirim bukti')}</Button>
           </Card>)}
@@ -213,7 +213,7 @@ function Orders({ p }: { p: Partner }) {
     <>
       <h2 style={{ marginBottom: 12 }}>{t('Pesanan saya')}</h2>
       {os.length === 0 ? <Empty>{t('Belum ada pesanan.')}</Empty> : os.map((o) => (
-        <a key={o.id} href={`#/p/${p.slug}/o/${o.id}`} className="tile"><Card><div className="row" style={{ justifyContent: 'space-between' }}><div><b>{o.code}</b> · {t(api.packages().find((x) => x.id === o.packageId)?.name ?? '')}<div className="mut sm">{o.pax} {t('peserta')} · {jt(o.total)}</div></div><OrderBadge s={o.status} /></div></Card></a>))}
+        <a key={o.id} href={`#/p/${p.slug}/o/${o.id}`} className="tile"><Card><div className="row" style={{ justifyContent: 'space-between' }}><div><b>{o.code}</b> · {t(api.packages().find((x) => x.id === o.packageId)?.name ?? '')}<div className="mut sm">{o.pax} {t('peserta')} · {rp(o.total)}</div></div><OrderBadge s={o.status} /></div></Card></a>))}
     </>
   );
 }

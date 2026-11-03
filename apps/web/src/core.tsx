@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { api } from './data/api.ts';
-import { setLang, t, useLang } from './i18n.ts';
+import { loc, setLang, t, useLang } from './i18n.ts';
 
 let ver = 0;
 api.subscribe(() => { ver++; });
@@ -28,6 +28,11 @@ export function Card({ title, children, right, tone }: { title?: ReactNode; chil
 export function Badge({ tone = 'gray', children }: { tone?: 'gray' | 'green' | 'amber' | 'red' | 'blue'; children: ReactNode }) { return <span className={`badge ${tone}`}>{children}</span>; }
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return <label className="field"><span>{label}</span>{children}{hint && <em>{hint}</em>}</label>;
+}
+/** Rupiah input that shows thousand separators while typing. */
+export function MoneyInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  useLang();
+  return <input inputMode="numeric" value={value ? Math.round(value).toLocaleString(loc()) : ''} placeholder="0" onChange={(e) => onChange(Number(e.target.value.replace(/\D/g, '')) || 0)} />;
 }
 export function Empty({ children }: { children: ReactNode }) { return <p className="empty">{children}</p>; }
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../data/api.ts';
-import { Badge, Button, Card, Empty, Field, Gate, OrderBadge, Stat, Table, Tabs, go, run, useApi } from '../core.tsx';
-import { fdate, fdt, jt, rp, t } from '../i18n.ts';
+import { Badge, Button, Card, Empty, Field, Gate, MoneyInput, OrderBadge, Stat, Table, Tabs, go, run, useApi } from '../core.tsx';
+import { fdate, fdt, rp, t } from '../i18n.ts';
 import type { Partner } from '../data/types.ts';
 
 export function PartnerAdmin({ slug }: { slug: string }) {
@@ -44,7 +44,7 @@ function Orders({ p }: { p: Partner }) {
   return (
     <>
       <div className="grid g4" style={{ marginBottom: 16 }}>
-        <Stat label={t('Pesanan')} value={rows.length} /><Stat label={t('Sedang berjalan')} value={inflight} /><Stat label={t('Komisi dari pesanan lunas')} value={jt(earned)} /><Stat label={t('Sudah dibayarkan Maidaa')} value={jt(paidOut)} />
+        <Stat label={t('Pesanan')} value={rows.length} /><Stat label={t('Sedang berjalan')} value={inflight} /><Stat label={t('Komisi dari pesanan lunas')} value={rp(earned)} /><Stat label={t('Sudah dibayarkan Maidaa')} value={rp(paidOut)} />
       </div>
       {rows.some((r) => r.placeholder) && <Card tone="warn"><p className="sm">{t('Sebagian angka komisi memakai pajak sementara (placeholder) dan akan berubah setelah angka pajak resmi ditetapkan.')}</p></Card>}
       <Card title={t('Pesanan')}>
@@ -96,10 +96,10 @@ function Prices({ p }: { p: Partner }) {
       <Card title={t('Usulkan harga baru')}>
         <div className="grid g2">
           <Field label={t('Paket')}><select value={pkg} onChange={(e) => setPkg(e.target.value)}>{pkgs.map((x) => <option key={x.id} value={x.id}>{t(x.name)}</option>)}</select></Field>
-          <Field label={t('Harga jual per orang (Rp)')} hint={cur ? `${t('Saat ini')}: ${rp(cur.price)}` : undefined}><input type="number" value={price || ''} onChange={(e) => setPrice(+e.target.value)} /></Field>
-          <Field label={t('Harga pasar sebagai acuan (Rp)')}><input type="number" value={mkt || ''} onChange={(e) => setMkt(+e.target.value)} /></Field>
+          <Field label={t('Harga jual per orang (Rp)')} hint={cur ? `${t('Saat ini')}: ${rp(cur.price)}` : undefined}><MoneyInput value={price} onChange={setPrice} /></Field>
+          <Field label={t('Harga pasar sebagai acuan (Rp)')}><MoneyInput value={mkt} onChange={setMkt} /></Field>
           <Field label={t('Bentuk komisi')}><select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}><option value="pct_of_net">{t('Persen dari margin bersih')}</option><option value="fixed_per_pax">{t('Nominal per orang')}</option></select></Field>
-          {mode === 'pct_of_net' ? <Field label={t('Bagian mitra (%)')}><input type="number" min={0} max={100} value={pct} onChange={(e) => setPct(+e.target.value)} /></Field> : <Field label={t('Komisi per orang (Rp)')}><input type="number" value={fixed || ''} onChange={(e) => setFixed(+e.target.value)} /></Field>}
+          {mode === 'pct_of_net' ? <Field label={t('Bagian mitra (%)')}><input type="number" min={0} max={100} value={pct} onChange={(e) => setPct(+e.target.value)} /></Field> : <Field label={t('Komisi per orang (Rp)')}><MoneyInput value={fixed} onChange={setFixed} /></Field>}
         </div>
         {aboveMarket && <Card tone="warn"><p className="sm">{t('Harga ini di atas harga pasar. Pembeli mungkin membandingkan dengan penyedia lain.')}</p></Card>}
         <Button disabled={!price} onClick={() => run(() => api.proposeAgreement(p.id, pkg, price, mkt || null, mode, pct, fixed), 'Usulan dikirim ke Maidaa.')}>{t('Kirim usulan')}</Button>

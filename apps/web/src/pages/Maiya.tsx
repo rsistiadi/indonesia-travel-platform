@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../data/api.ts';
-import { useApi } from '../core.tsx';
+import { toast, useApi } from '../core.tsx';
 import { rp, t, fdate } from '../i18n.ts';
 import { run } from '../core.tsx';
 
@@ -24,7 +24,7 @@ export function Maiya({ pid, partnerName }: { pid: string; partnerName: string }
     return t('Saya bisa membantu soal harga, kursi, pembayaran, dan dokumen. Coba salah satu tombol di bawah.');
   };
   const send = (q: string) => { if (!q.trim()) return; setMsgs((m) => [...m, { me: true, text: q }, { me: false, text: reply(q) }]); setText(''); };
-  const human = () => run(() => { api.openTicket('support', msgs.filter((m) => m.me).map((m) => m.text).join(' | ') || t('Minta dihubungi'), null, pid); }, 'Permintaan dikirim ke tim.');
+  const human = () => { if (me?.role !== 'buyer') { toast(t('Masuk sebagai pembeli untuk menghubungi tim.'), true); return; } run(() => { api.openTicket('support', msgs.filter((m) => m.me).map((m) => m.text).join(' | ') || t('Minta dihubungi'), null, pid); }, 'Permintaan dikirim ke tim.'); };
   if (!open) return <button className="btn primary maiya-fab" onClick={() => setOpen(true)}>💬 {t('Tanya Maiya')}</button>;
   return (
     <aside className="maiya" aria-label="Maiya">

@@ -52,7 +52,7 @@ td.num,th.num{text-align:right}
 .hero{padding:26px 0 8px}.hero p{color:var(--mut);max-width:60ch}
 .tile{display:block;text-decoration:none;color:inherit}.tile:hover{border-color:var(--acc)}
 @media(max-width:560px){.hide-sm{display:none}h1{font-size:1.35rem}}
-.bad{color:var(--bad-ink)}
+span.bad,p.bad{color:var(--bad-ink)}.toast.bad{color:#fff}
 
 /* Buyer site: Primkop IDI red and white (palette from the approved mockups) */
 .buyer{--bg:#faf9f5;--panel:#fff;--ink:#1a1918;--mut:#6b6a68;--line:#e5e3dd;--acc:#CC1B1B;--ok:#fde8e8;--warn:#fdf7ed;--warn-ink:#7a5a14;--blue:#fde8e8;--blue-ink:#9b1414;

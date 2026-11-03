@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../data/api.ts';
-import { Badge, Button, Card, Empty, Field, Gate, Table, Tabs, run, useApi } from '../core.tsx';
+import { Badge, Button, Card, Empty, Field, Gate, MoneyInput, Table, Tabs, run, useApi } from '../core.tsx';
 import { fdt, t } from '../i18n.ts';
 import type { TaxRuleRow } from '../data/types.ts';
 
@@ -47,7 +47,8 @@ function Tax() {
 
 function Fees() {
   const s = api.settings(); const [v, setV] = useState({ ...s });
-  const num = (k: 'transfer' | 'cardPct' | 'financingPool' | 'holdHours' | 'dpPct' | 'adminFee', l: string) => <Field label={t(l)}><input type="number" step="any" value={v[k]} onChange={(e) => setV({ ...v, [k]: +e.target.value })} /></Field>;
+  const num = (k: 'transfer' | 'cardPct' | 'financingPool' | 'holdHours' | 'dpPct' | 'adminFee', l: string) => (
+    <Field label={t(l)}>{['transfer', 'financingPool', 'adminFee'].includes(k) ? <MoneyInput value={v[k]} onChange={(n) => setV({ ...v, [k]: n })} /> : <input type="number" step="any" value={v[k]} onChange={(e) => setV({ ...v, [k]: +e.target.value })} />}</Field>);
   return (
     <Card title={t('Biaya dan aturan')}>
       <div className="grid g3">

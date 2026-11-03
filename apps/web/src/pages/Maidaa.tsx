@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../data/api.ts';
-import { Badge, Button, Card, Empty, Field, Gate, OrderBadge, Stat, Table, Tabs, run, useApi } from '../core.tsx';
-import { fdate, fdt, jt, rp, t } from '../i18n.ts';
+import { Badge, Button, Card, Empty, Field, Gate, MoneyInput, OrderBadge, Stat, Table, Tabs, run, useApi } from '../core.tsx';
+import { fdate, fdt, rp, t } from '../i18n.ts';
 
 export function Maidaa() {
   useApi();
@@ -35,7 +35,7 @@ function Pipeline() {
     <>
       <div className="grid g4" style={{ marginBottom: 16 }}>
         <Stat label={t('Menunggu pembayaran')} value={by('awaiting_payment')} /><Stat label={t('Perlu diperiksa')} value={by('payment_review') + by('financing_review')} />
-        <Stat label={t('Penjualan lunas')} value={jt(sum((o) => o.total))} sub={`${t('Margin bersih')}: ${jt(sum((o) => o.money.net))}`} /><Stat label={t('Siap diproses')} value={by('paid') + by('fulfilling')} />
+        <Stat label={t('Penjualan lunas')} value={rp(sum((o) => o.total))} sub={`${t('Margin bersih')}: ${rp(sum((o) => o.money.net))}`} /><Stat label={t('Siap diproses')} value={by('paid') + by('fulfilling')} />
       </div>
       <Card title={t('Semua pesanan')}>
         {rows.length === 0 ? <Empty>{t('Belum ada pesanan.')}</Empty> :
@@ -83,7 +83,7 @@ function Seats() {
           <Field label={t('Paket')}><select value={np} onChange={(e) => setNp(e.target.value)}>{pkgs.map((p) => <option key={p.id} value={p.id}>{t(p.name)}</option>)}</select></Field>
           <Field label={t('Tanggal berangkat')}><input type="date" value={nd} onChange={(e) => setNd(e.target.value)} /></Field>
           <Field label={t('Kapasitas')}><input type="number" value={nc} onChange={(e) => setNc(+e.target.value)} /></Field>
-          <Field label={t('Harga dasar per orang (Rp)')}><input type="number" value={nh || ''} onChange={(e) => setNh(+e.target.value)} /></Field>
+          <Field label={t('Harga dasar per orang (Rp)')}><MoneyInput value={nh} onChange={setNh} /></Field>
         </div>
         <Button disabled={!nd || !nh} onClick={() => run(() => { api.addDeparture(np, nd, nc, nh); setNd(''); }, 'Keberangkatan ditambahkan.')}>{t('Tambah')}</Button>
       </Card>
@@ -98,7 +98,7 @@ function DepRow({ d }: { d: ReturnType<typeof api.departuresAll>[number] }) {
       <div className="grid g4" style={{ marginTop: 8 }}>
         <Field label={t('Kapasitas')}><input type="number" value={cap} onChange={(e) => setCap(+e.target.value)} /></Field>
         <Field label={t('Terjual di luar platform')}><input type="number" value={out} onChange={(e) => setOut(+e.target.value)} /></Field>
-        <Field label={t('Harga dasar per orang (Rp)')}><input type="number" value={hpp} onChange={(e) => setHpp(+e.target.value)} /></Field>
+        <Field label={t('Harga dasar per orang (Rp)')}><MoneyInput value={hpp} onChange={setHpp} /></Field>
         <div className="row" style={{ alignItems: 'flex-end' }}><Button small onClick={() => run(() => api.saveDeparture(d.id, { capacity: cap, soldOutside: out, hpp }), 'Tersimpan.')}>{t('Simpan')}</Button>
           <Button small kind="ghost" onClick={() => run(() => api.saveDeparture(d.id, { status: d.status === 'open' ? 'closed' : 'open' }))}>{t(d.status === 'open' ? 'Tutup penjualan' : 'Buka penjualan')}</Button></div>
       </div>
@@ -123,10 +123,10 @@ function Prices() {
         <div className="grid g3">
           <Field label={t('Mitra')}><select value={pid} onChange={(e) => setPid(e.target.value)}>{partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
           <Field label={t('Paket')}><select value={pkg} onChange={(e) => setPkg(e.target.value)}>{pkgs.map((p) => <option key={p.id} value={p.id}>{t(p.name)}</option>)}</select></Field>
-          <Field label={t('Harga jual per orang (Rp)')}><input type="number" value={price || ''} onChange={(e) => setPrice(+e.target.value)} /></Field>
-          <Field label={t('Harga pasar sebagai acuan (Rp)')}><input type="number" value={mkt || ''} onChange={(e) => setMkt(+e.target.value)} /></Field>
+          <Field label={t('Harga jual per orang (Rp)')}><MoneyInput value={price} onChange={setPrice} /></Field>
+          <Field label={t('Harga pasar sebagai acuan (Rp)')}><MoneyInput value={mkt} onChange={setMkt} /></Field>
           <Field label={t('Bentuk komisi')}><select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}><option value="pct_of_net">{t('Persen dari margin bersih')}</option><option value="fixed_per_pax">{t('Nominal per orang')}</option></select></Field>
-          {mode === 'pct_of_net' ? <Field label={t('Bagian mitra (%)')}><input type="number" value={pct} onChange={(e) => setPct(+e.target.value)} /></Field> : <Field label={t('Komisi per orang (Rp)')}><input type="number" value={fixed || ''} onChange={(e) => setFixed(+e.target.value)} /></Field>}
+          {mode === 'pct_of_net' ? <Field label={t('Bagian mitra (%)')}><input type="number" value={pct} onChange={(e) => setPct(+e.target.value)} /></Field> : <Field label={t('Komisi per orang (Rp)')}><MoneyInput value={fixed} onChange={setFixed} /></Field>}
         </div>
         {pv && <div className="sum" style={{ marginBottom: 12 }}><span>{t('Margin kotor per orang')}</span><span>{rp(pv.gross)}</span><span>{t('Biaya dan pajak')}</span><span>{rp(pv.fee + pv.taxTotal)}</span><span>{t('Margin bersih')}</span><span>{rp(pv.net)}</span><span>{t('Bagian mitra')}</span><span>{rp(pv.partnerShare)}</span><span className="t">{t('Bagian platform')}</span><span className="t">{rp(pv.platformShare)}</span></div>}
         {pv?.invalid && <p className="sm bad">{t('Harga ini membuat margin negatif.')}</p>}
