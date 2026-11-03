@@ -152,18 +152,29 @@ export class Api {
       .map((t) => ({ id: t.id, name: t.name, taxType: t.taxType, base: t.base, ratePct: t.ratePct, placeholder: t.placeholder }));
   }
   /** What the buyer may see before ordering: prices only, never margin or base price. */
-  buyerQuote(pid: string, depId: string, pax: number, codeText: string, method: 'transfer' | 'card' | 'financing', phone?: string) {
+  buyerQuote(pid: string, depId: string, pax: number, codeText: string, method: 'transfer' | 'card' | 'financing', phone?: string, occupancyType?: T.OccupancyType) {
     const dep = this.s.departures.find((d) => d.id === depId); if (!dep) return err('DEPARTURE_NOT_AVAILABLE');
     const ag = this.live(pid, dep.packageId); if (!ag) return err('PRICE_MISMATCH');
+    // Resolve unit price: if occupancyType given, use differential pricing; else use agreement base price
+    let unitPrice = ag.price;
+    if (occupancyType) {
+      const pkg = this.s.packages.find((p) => p.id === dep.packageId);
+      const occs = pkg?.occupancy;
+      if (occs?.length) {
+        const lowestBase = Math.min(...occs.map((o) => o.basePrice));
+        const occ = occs.find((o) => o.type === occupancyType);
+        if (occ) unitPrice = ag.price + (occ.basePrice - lowestBase);
+      }
+    }
     let code: T.Code | null = null; let self = false;
     if (codeText.trim()) { const v = this.validateCode(pid, codeText, phone); if (v.ok) { code = v.code; self = v.self; } }
-    const q = this.fullQuote(pid, dep, ag, pax, code, method, self);
-    return { unit: ag.price, discountPerPax: q.discountPerPax, total: q.total, floorHit: q.floorHit, codeOk: codeText.trim() ? !!code : null, self, invalid: q.invalid, code };
+    const q = this.fullQuote(pid, dep, ag, pax, code, method, self, unitPrice);
+    return { unit: unitPrice, discountPerPax: q.discountPerPax, total: q.total, floorHit: q.floorHit, codeOk: codeText.trim() ? !!code : null, self, invalid: q.invalid, code };
   }
-  private fullQuote(pid: string, dep: T.Departure, ag: T.Agreement, pax: number, code: T.Code | null, method: 'transfer' | 'card' | 'financing', self: boolean): Quote {
+  private fullQuote(pid: string, dep: T.Departure, ag: T.Agreement, pax: number, code: T.Code | null, method: 'transfer' | 'card' | 'financing', self: boolean, unitPrice?: number): Quote {
     const pk = this.s.packages.find((p) => p.id === dep.packageId)!; const st = this.s.settings;
     return quote({
-      sellingPricePerPax: ag.price, hppPerPax: dep.hpp, pax, method, selfPurchase: self,
+      sellingPricePerPax: unitPrice ?? ag.price, hppPerPax: dep.hpp, pax, method, selfPurchase: self,
       discount: code ? { mode: code.mode, value: code.value } : null,
       commission: ag.mode === 'pct_of_net' ? { mode: 'pct_of_net', partnerPct: ag.pct } : { mode: 'fixed_per_pax', fixedPerPax: ag.fixed },
       fees: { transferFlat: st.transfer, cardPct: st.cardPct, financingPoolFlat: st.financingPool }, taxRules: this.rules(pk.taxClass),
@@ -209,13 +220,13 @@ export class Api {
 
   // ---------- orders ----------
   /** Single entry for creating orders; mirrors create_order_record(). */
-  placeOrder(a: { partnerId: string; departureId: string; pax: number; method: 'transfer' | 'card' | 'financing'; codeText: string; tenor?: number }) {
+  placeOrder(a: { partnerId: string; departureId: string; pax: number; method: 'transfer' | 'card' | 'financing'; codeText: string; tenor?: number; occupancyType?: T.OccupancyType }) {
     const u = this.need('buyer');
     const m = this.s.members.find((x) => x.partnerId === a.partnerId && x.userId === u.id);
     if (!m || m.status !== 'approved') err('MEMBER_NOT_ELIGIBLE');
-    return this._place({ memberId: m!.id, departureId: a.departureId, pax: a.pax, method: a.method, codeText: a.codeText, tenor: a.tenor });
+    return this._place({ memberId: m!.id, departureId: a.departureId, pax: a.pax, method: a.method, codeText: a.codeText, tenor: a.tenor, occupancyType: a.occupancyType });
   }
-  private _place(a: { memberId: string; departureId: string; pax: number; method: 'transfer' | 'card' | 'financing'; codeText: string | null; tenor?: number }): T.Order {
+  private _place(a: { memberId: string; departureId: string; pax: number; method: 'transfer' | 'card' | 'financing'; codeText: string | null; tenor?: number; occupancyType?: T.OccupancyType }): T.Order {
     const m = this.s.members.find((x) => x.id === a.memberId)!;
     const dep = this.s.departures.find((d) => d.id === a.departureId);
     if (!dep || dep.status !== 'open') return err('DEPARTURE_NOT_AVAILABLE');
@@ -223,16 +234,26 @@ export class Api {
     if (a.pax < 1 || a.pax > 20) err('PAX_INVALID');
     if (this.seatsLeft(dep.id) < a.pax) err('SEATS_UNAVAILABLE');
     const ag = this.live(m.partnerId, dep.packageId); if (!ag) return err('PRICE_MISMATCH');
+    // Resolve unit price from occupancy type if provided
+    let unitPrice: number | undefined;
+    if (a.occupancyType) {
+      const occs = pk.occupancy;
+      if (occs?.length) {
+        const lowestBase = Math.min(...occs.map((o) => o.basePrice));
+        const occ = occs.find((o) => o.type === a.occupancyType);
+        if (occ) unitPrice = ag.price + (occ.basePrice - lowestBase);
+      }
+    }
     let code: T.Code | null = null; let self = false;
     if (a.codeText && a.codeText.trim()) { const v = this.validateCode(m.partnerId, a.codeText, m.phone); if (!v.ok) err('CODE_NOT_VALID_HERE'); else { code = v.code; self = v.self; } }
-    const q = this.fullQuote(m.partnerId, dep, ag, a.pax, code, a.method, self);
+    const q = this.fullQuote(m.partnerId, dep, ag, a.pax, code, a.method, self, unitPrice);
     if (q.invalid) err('BELOW_COST');
     const hours = this.s.settings.holdHours; const fin = a.method === 'financing';
     if (fin && !a.tenor) err('FINANCING_DETAILS_REQUIRED');
     const o: T.Order = {
       id: uid('o'), code: 'M-' + this.s.seq++, partnerId: m.partnerId, memberId: m.id, buyerId: m.userId, departureId: dep.id, packageId: dep.packageId, pax: a.pax,
       method: a.method, status: fin ? 'financing_review' : 'awaiting_payment', holdExpires: fin ? null : new Date(Date.now() + hours * 36e5).toISOString(),
-      codeId: code?.id ?? null, unit: ag.price, discountPerPax: q.discountPerPax, total: q.total, createdAt: now(), tenor: a.tenor,
+      codeId: code?.id ?? null, unit: unitPrice ?? ag.price, discountPerPax: q.discountPerPax, total: q.total, createdAt: now(), tenor: a.tenor,
       money: { hppTotal: q.hppTotal, fee: q.fee, gross: q.gross, taxTotal: q.taxTotal, net: q.net, partnerShare: q.partnerShare, platformShare: q.platformShare, partnerPayout: q.partnerPayout, placeholder: q.hasPlaceholderTax, taxLines: [...q.taxLines, ...q.withholdingLines].map((l) => ({ name: l.name, amount: l.amount })) },
     };
     this.s.orders.unshift(o);

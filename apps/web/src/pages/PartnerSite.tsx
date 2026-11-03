@@ -4,6 +4,7 @@ import { Badge, Button, Card, Empty, Field, MoneyInput, OrderBadge, go, run, use
 import { dyn, fdate, fdt, rp, t, useLang } from '../i18n.ts';
 import { Maiya } from './Maiya.tsx';
 import type { Partner } from '../data/types.ts';
+import type * as T from '../data/types.ts';
 
 export function PartnerSite({ slug, sub }: { slug: string; sub: string[] }) {
   useApi();
@@ -316,41 +317,89 @@ function Join({ p, rejected }: { p: Partner; rejected: boolean }) {
 }
 
 function Checkout({ p, depId }: { p: Partner; depId: string }) {
+  const lang = useLang();
   const c = api.catalog(p.id).find((x) => x.depId === depId);
   const me = api.myMember(p.id)!;
-  const [pax, setPax] = useState(1); const [codeText, setCode] = useState(''); const [method, setMethod] = useState<'transfer' | 'card' | 'financing'>('transfer'); const [tenor, setTenor] = useState(24);
+  const detail = api.packageDetail(p.id, depId);
+  const [pax, setPax] = useState(1);
+  const [codeText, setCode] = useState('');
+  const [method, setMethod] = useState<'transfer' | 'card' | 'financing'>('transfer');
+  const [tenor, setTenor] = useState(24);
+  const [occ, setOcc] = useState<T.OccupancyType | null>(null);
+  const [checkedAddOns, setCheckedAddOns] = useState<Set<string>>(new Set());
   if (!c || !c.price) return <Card title={t('Keberangkatan tidak tersedia')}><Button onClick={() => go(`/p/${p.slug}`)}>{t('Kembali')}</Button></Card>;
-  let q; try { q = api.buyerQuote(p.id, depId, pax, codeText, method, me.phone); } catch { q = null; }
+  let q; try { q = api.buyerQuote(p.id, depId, pax, codeText, method, me.phone, occ ?? undefined); } catch { q = null; }
   const fq = q && method === 'financing' ? api.financingQuote(q.total, tenor) : null;
   const left = c.left ?? 0;
+  const occPrices = detail?.occupancyPrices ?? [];
+  const addOns = detail?.addOns ?? [];
+  const lowestOccPrice = occPrices.length ? Math.min(...occPrices.map((o) => o.price)) : null;
+  const addOnTotal = addOns.filter((a) => checkedAddOns.has(a.id)).reduce((s, a) => s + (a.perPerson ? a.price * pax : a.price), 0);
+  const toggleAddOn = (id: string) => setCheckedAddOns((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   return (
     <div className="grid split">
-      <Card title={t(c.pkg.name)} right={<span className="mut sm">{fdate(c.date)}</span>}>
-        <div className="grid g2">
-          <Field label={t('Jumlah peserta')} hint={t('Sisa {0} kursi', left)}><input type="number" min={1} max={Math.min(20, left)} value={pax} onChange={(e) => setPax(Math.max(1, Math.min(Math.min(20, left) || 1, +e.target.value || 1)))} /></Field>
-          {p.allowCodes && <Field label={t('Kode diskon (opsional)')} hint={q?.codeOk === false ? t('Kode tidak berlaku di situs ini.') : q?.codeOk ? (q.self ? t('Kode Anda sendiri: diskon berlaku, komisi tidak.') : t('Kode dipakai.')) : undefined}><input value={codeText} onChange={(e) => setCode(e.target.value)} placeholder="IDI-2026" /></Field>}
-        </div>
-        <Field label={t('Cara pembayaran')}>
-          <select value={method} onChange={(e) => setMethod(e.target.value as typeof method)}>
-            <option value="transfer">{t('Transfer bank (diperiksa Maidaa)')}</option><option value="card">{t('Kartu kredit')}</option><option value="financing">{t('Pembiayaan Amitra (cicilan)')}</option>
-          </select>
-        </Field>
-        {method === 'financing' && <Field label={t('Tenor cicilan')}><select value={tenor} onChange={(e) => setTenor(+e.target.value)}>{[12, 24, 36].map((n) => <option key={n} value={n}>{t('{0} bulan', n)}</option>)}</select></Field>}
-        <Card tone="warn"><p className="sm">{t('Kursi ditahan {0} jam setelah Anda memesan. Tanpa pembayaran, kursi dilepas kembali.', api.state.settings.holdHours)}</p></Card>
-      </Card>
+      <div>
+        <Card title={t(c.pkg.name)} right={<span className="mut sm">{fdate(c.date)}</span>}>
+          <div className="grid g2">
+            <Field label={t('Jumlah peserta')} hint={t('Sisa {0} kursi', left)}><input type="number" min={1} max={Math.min(20, left)} value={pax} onChange={(e) => setPax(Math.max(1, Math.min(Math.min(20, left) || 1, +e.target.value || 1)))} /></Field>
+            {p.allowCodes && <Field label={t('Kode diskon (opsional)')} hint={q?.codeOk === false ? t('Kode tidak berlaku di situs ini.') : q?.codeOk ? (q.self ? t('Kode Anda sendiri: diskon berlaku, komisi tidak.') : t('Kode dipakai.')) : undefined}><input value={codeText} onChange={(e) => setCode(e.target.value)} placeholder="IDI-2026" /></Field>}
+          </div>
+          {occPrices.length > 0 && (
+            <Field label={t('Tipe kamar')}>
+              <div className="occ-grid" style={{ marginTop: 6 }}>
+                {occPrices.map((op) => (
+                  <button key={op.type} className={'occ-card' + (occ === op.type ? ' selected' : '')} onClick={() => setOcc(op.type as T.OccupancyType)} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}>
+                    {lowestOccPrice !== null && op.price === lowestOccPrice && <div className="occ-best">{t('Terbaik')}</div>}
+                    <div className="occ-type">{OCC_LABEL[op.type]?.[lang === 'en' ? 1 : 0] ?? op.type}</div>
+                    <div className="occ-price">{rp(op.price)}</div>
+                    <div className="mut sm">{t('per orang')}</div>
+                  </button>
+                ))}
+              </div>
+              {!occ && <p className="sm" style={{ color: '#CC1B1B', marginTop: 6 }}>{t('Pilih tipe kamar untuk melanjutkan.')}</p>}
+            </Field>
+          )}
+          <Field label={t('Cara pembayaran')}>
+            <select value={method} onChange={(e) => setMethod(e.target.value as typeof method)}>
+              <option value="transfer">{t('Transfer bank (diperiksa Maidaa)')}</option><option value="card">{t('Kartu kredit')}</option><option value="financing">{t('Pembiayaan Amitra (cicilan)')}</option>
+            </select>
+          </Field>
+          {method === 'financing' && <Field label={t('Tenor cicilan')}><select value={tenor} onChange={(e) => setTenor(+e.target.value)}>{[12, 24, 36].map((n) => <option key={n} value={n}>{t('{0} bulan', n)}</option>)}</select></Field>}
+          <Card tone="warn"><p className="sm">{t('Kursi ditahan {0} jam setelah Anda memesan. Tanpa pembayaran, kursi dilepas kembali.', api.state.settings.holdHours)}</p></Card>
+        </Card>
+        {addOns.length > 0 && (
+          <Card title={t('Layanan tambahan (opsional)')} style={{ marginTop: 12 }}>
+            <p className="sm mut" style={{ marginBottom: 8 }}>{t('Layanan di bawah bisa dipesan terpisah setelah pemesanan diproses.')}</p>
+            {addOns.map((a) => (
+              <label key={a.id} className="addon-row" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', borderBottom: '1px solid var(--br)' }}>
+                <input type="checkbox" checked={checkedAddOns.has(a.id)} onChange={() => toggleAddOn(a.id)} />
+                <div style={{ flex: 1 }}>
+                  <div>{dyn(a.nameId, a.nameEn)}</div>
+                </div>
+                <div style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>+ {rp(a.price)}{a.perPerson && <span className="sm mut"> /orang</span>}</div>
+              </label>
+            ))}
+          </Card>
+        )}
+      </div>
       <Card title={t('Ringkasan')}>
         {q ? <>
-          <div className="sum"><span>{t('Harga per orang')}</span><span>{rp(q.unit)}</span>
+          <div className="sum">
+            <span>{t('Tipe kamar')}</span><span>{occ ? (OCC_LABEL[occ]?.[lang === 'en' ? 1 : 0] ?? occ) : <span className="mut">—</span>}</span>
+            <span>{t('Harga per orang')}</span><span>{rp(q.unit)}</span>
             {q.discountPerPax > 0 && <><span>{t('Diskon per orang')}</span><span>− {rp(q.discountPerPax)}</span></>}
             <span>{t('Peserta')}</span><span>× {pax}</span>
-            <span className="t">{t('Total')}</span><span className="t">{rp(q.total)}</span></div>
+            <span className="t">{t('Total paket')}</span><span className="t">{rp(q.total)}</span>
+            {addOnTotal > 0 && <><span>{t('Layanan tambahan')}</span><span>+ {rp(addOnTotal)}</span><span className="sm mut">{t('(dibayar terpisah)')}</span><span className="sm mut"></span></>}
+          </div>
           {q.floorHit && <p className="sm mut">{t('Diskon dibatasi agar harga tidak di bawah batas minimum.')}</p>}
           {fq && <div className="sum" style={{ marginTop: 12 }}>
             <span>{t('Uang muka')}</span><span>{rp(fq.dp)}</span><span>{t('Biaya admin')}</span><span>{rp(fq.admin)}</span><span>{t('Asuransi')}</span><span>{rp(fq.insurance)}</span>
             <span className="t">{t('Pembayaran pertama')}</span><span className="t">{rp(fq.firstPayment)}</span>
             <span>{t('Cicilan per bulan')}</span><span>{rp(fq.instalment)} × {tenor}</span>
             <span>{t('Total biaya pembiayaan')}</span><span>{rp(fq.totalCost)}</span><span>{t('Lebih mahal dari tunai')}</span><span>{rp(fq.extra)}</span></div>}
-          <div style={{ marginTop: 14 }}><Button disabled={q.invalid || left < pax} onClick={() => { let id = ''; if (run(() => { id = api.placeOrder({ partnerId: p.id, departureId: depId, pax, method, codeText, tenor: method === 'financing' ? tenor : undefined }).id; }, 'Pesanan dibuat.')) go(`/p/${p.slug}/o/${id}`); }}>{t('Buat pesanan')}</Button></div>
+          <div style={{ marginTop: 14 }}><Button disabled={!occ || q.invalid || left < pax} onClick={() => { let id = ''; if (run(() => { id = api.placeOrder({ partnerId: p.id, departureId: depId, pax, method, codeText, tenor: method === 'financing' ? tenor : undefined, occupancyType: occ! }).id; }, 'Pesanan dibuat.')) go(`/p/${p.slug}/o/${id}`); }}>{t('Buat pesanan')}</Button></div>
+          {!occ && <p className="sm mut" style={{ marginTop: 6 }}>{t('Pilih tipe kamar untuk mengaktifkan tombol.')}</p>}
         </> : <Empty>{t('Harga belum tersedia.')}</Empty>}
       </Card>
     </div>
