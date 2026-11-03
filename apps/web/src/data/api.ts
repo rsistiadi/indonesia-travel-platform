@@ -348,6 +348,43 @@ export class Api {
     this.s.departures.push({ id: uid('d'), packageId, date, capacity, soldOutside: 0, status: 'open', hpp }); this.log('departure_added', `${packageId} ${date}`); this.emit();
   }
   packages() { return this.s.packages; }
+  savePackage(pkg: Partial<T.Pkg> & { id?: string }) {
+    this.need('maidaa_staff', 'platform_admin');
+    if (pkg.id) {
+      const idx = this.s.packages.findIndex((p) => p.id === pkg.id);
+      if (idx < 0) err('NOT_FOUND');
+      const merged = { ...this.s.packages[idx], ...pkg };
+      // Lifecycle guard: can't publish without a name and at least one occupancy tier
+      if (merged.status === 'published' || merged.status === 'coming_soon') {
+        if (!merged.name?.trim()) err('PACKAGE_NEEDS_NAME');
+      }
+      if (merged.status === 'published') {
+        if (!merged.occupancy?.length) err('PACKAGE_NEEDS_OCCUPANCY');
+      }
+      this.s.packages[idx] = merged;
+      this.log('package_updated', pkg.id!);
+    } else {
+      const newPkg: T.Pkg = {
+        id: uid('pkg'), code: pkg.code ?? uid('pc').toUpperCase(), name: pkg.name ?? '', category: pkg.category ?? 'umrah',
+        cls: pkg.cls ?? 'economy', days: pkg.days ?? 9, summaryId: pkg.summaryId ?? '', summaryEn: pkg.summaryEn ?? '',
+        includes: pkg.includes ?? [], taxClass: pkg.taxClass ?? null, status: 'draft',
+        occupancy: pkg.occupancy ?? [], addOns: pkg.addOns ?? [], cancellation: pkg.cancellation ?? [],
+      };
+      this.s.packages.push(newPkg);
+      this.log('package_created', newPkg.id);
+    }
+    this.emit();
+  }
+  archivePackage(id: string) {
+    this.need('maidaa_staff', 'platform_admin');
+    const p = this.s.packages.find((x) => x.id === id); if (!p) err('NOT_FOUND');
+    // Can't archive if any active departures
+    const hasActive = this.s.departures.some((d) => d.packageId === id && d.status === 'open');
+    if (hasActive) err('HAS_ACTIVE_DEPARTURES');
+    // Remove from list (soft: set status to a hidden value — we'll use coming_soon + flag, but simpler: just filter out)
+    this.s.packages = this.s.packages.filter((x) => x.id !== id);
+    this.log('package_archived', id); this.emit();
+  }
   /** Buyer-facing package detail with per-occupancy selling prices. Never exposes base price or margin. */
   packageDetail(pid: string, depId: string) {
     this.expire();

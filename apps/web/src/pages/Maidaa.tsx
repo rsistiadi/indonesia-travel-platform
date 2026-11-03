@@ -21,8 +21,8 @@ function Console() {
   const due = api.ledgerAll().filter((l) => l.status === 'pending').length;
   return (
     <>
-      <Tabs value={tab} onChange={setTab} tabs={[['pipeline', 'Penjualan'], ['payments', 'Pembayaran', pays], ['seats', 'Kursi dan harga dasar'], ['prices', 'Harga mitra', props], ['payout', 'Pembagian margin', due], ['tickets', 'Bantuan', tix]]} />
-      {tab === 'pipeline' && <Pipeline />}{tab === 'payments' && <Payments />}{tab === 'seats' && <Seats />}{tab === 'prices' && <Prices />}{tab === 'payout' && <Payout />}{tab === 'tickets' && <Tickets />}
+      <Tabs value={tab} onChange={setTab} tabs={[['pipeline', 'Penjualan'], ['payments', 'Pembayaran', pays], ['packages', 'Paket'], ['seats', 'Kursi dan harga dasar'], ['prices', 'Harga mitra', props], ['payout', 'Pembagian margin', due], ['tickets', 'Bantuan', tix]]} />
+      {tab === 'pipeline' && <Pipeline />}{tab === 'payments' && <Payments />}{tab === 'packages' && <Packages />}{tab === 'seats' && <Seats />}{tab === 'prices' && <Prices />}{tab === 'payout' && <Payout />}{tab === 'tickets' && <Tickets />}
     </>
   );
 }
@@ -174,6 +174,181 @@ function Payout() {
       {ls.length === 0 ? <Empty>{t('Belum ada pembagian.')}</Empty> :
         <Table head={['Pesanan', 'Penerima', 'Jumlah', 'Status', 'Aksi']} rows={ls.map((l) => [l.order.code, l.partnerName, <b key="a">{rp(l.amount)}</b>, <Badge key="s" tone={l.status === 'paid' ? 'green' : 'amber'}>{t(l.status === 'paid' ? 'Dibayar' : 'Menunggu')}</Badge>, l.status === 'pending' && l.party === 'partner' ? <Button key="b" small onClick={() => run(() => api.payLedger(l.id), 'Ditandai dibayar.')}>{t('Tandai dibayar')}</Button> : ''])} />}
     </Card>
+  );
+}
+
+const OCC_LABELS: Record<string, string> = { quad: 'Quad (4)', triple: 'Triple (3)', double: 'Double (2)', single: 'Single (1)' };
+const STATUS_FLOW: Record<string, string> = { draft: 'coming_soon', coming_soon: 'published', published: 'draft' };
+const STATUS_LABEL: Record<string, string> = { draft: 'Draft', coming_soon: 'Segera hadir', published: 'Dipublikasi' };
+const STATUS_TONE: Record<string, 'gray' | 'amber' | 'green'> = { draft: 'gray', coming_soon: 'amber', published: 'green' };
+
+function PkgForm({ initial, onSave, onCancel }: { initial?: Partial<import('../data/types.ts').Pkg>; onSave: (p: Partial<import('../data/types.ts').Pkg>) => void; onCancel: () => void }) {
+  const [name, setName] = useState(initial?.name ?? '');
+  const [category, setCategory] = useState<'umrah' | 'holyland' | 'haji'>(initial?.category ?? 'umrah');
+  const [cls, setCls] = useState(initial?.cls ?? 'economy');
+  const [days, setDays] = useState(String(initial?.days ?? '9'));
+  const [summaryId, setSummaryId] = useState(initial?.summaryId ?? '');
+  const [summaryEn, setSummaryEn] = useState(initial?.summaryEn ?? '');
+  const [includes, setIncludes] = useState((initial?.includes ?? []).join('\n'));
+  const [excludes, setExcludes] = useState((initial?.excludes ?? []).join('\n'));
+  const [departureCity, setDepartureCity] = useState(initial?.departureCity ?? '');
+  // Occupancy
+  type OccRow = { type: string; basePrice: string };
+  const initOcc: OccRow[] = (initial?.occupancy ?? []).map((o) => ({ type: o.type, basePrice: String(o.basePrice) }));
+  if (!initOcc.length) initOcc.push({ type: 'quad', basePrice: '' }, { type: 'triple', basePrice: '' }, { type: 'double', basePrice: '' }, { type: 'single', basePrice: '' });
+  const [occs, setOccs] = useState<OccRow[]>(initOcc);
+  // Add-ons
+  type AoRow = { nameId: string; nameEn: string; price: string; perPerson: boolean };
+  const [addOns, setAddOns] = useState<AoRow[]>((initial?.addOns ?? []).map((a) => ({ nameId: a.nameId, nameEn: a.nameEn, price: String(a.price), perPerson: a.perPerson })));
+  // Cancellation
+  type CxRow = { minDays: string; maxDays: string; pct: string };
+  const [cancels, setCancels] = useState<CxRow[]>((initial?.cancellation ?? []).map((c) => ({ minDays: String(c.minDays), maxDays: c.maxDays != null ? String(c.maxDays) : '', pct: String(c.pct) })));
+
+  const submit = () => {
+    if (!name.trim()) return alert(t('Nama paket wajib diisi.'));
+    const occupancy = occs.filter((o) => o.basePrice.trim()).map((o) => ({ type: o.type as import('../data/types.ts').OccupancyType, basePrice: Number(o.basePrice) }));
+    const aos = addOns.filter((a) => a.nameId.trim()).map((a, i) => ({ id: initial?.addOns?.[i]?.id ?? `ao-${Date.now()}-${i}`, nameId: a.nameId, nameEn: a.nameEn, price: Number(a.price), perPerson: a.perPerson }));
+    const cxs = cancels.filter((c) => c.pct.trim()).map((c) => ({ minDays: Number(c.minDays), maxDays: c.maxDays.trim() ? Number(c.maxDays) : null, pct: Number(c.pct) }));
+    onSave({ ...initial, name: name.trim(), category, cls: cls.trim(), days: Number(days) || 9, summaryId: summaryId.trim(), summaryEn: summaryEn.trim(), includes: includes.split('\n').map((s) => s.trim()).filter(Boolean), excludes: excludes.split('\n').map((s) => s.trim()).filter(Boolean), departureCity: departureCity.trim() || undefined, occupancy, addOns: aos, cancellation: cxs });
+  };
+
+  return (
+    <div className="pkg-form">
+      <div className="pkg-form-grid">
+        <Field label={t('Nama paket')}><input className="inp" value={name} onChange={(e) => setName(e.target.value)} placeholder="Umrah Ramadan 2027 *" /></Field>
+        <Field label={t('Kategori')}>
+          <select className="inp" value={category} onChange={(e) => setCategory(e.target.value as typeof category)}>
+            <option value="umrah">Umrah</option><option value="holyland">Holy Land</option><option value="haji">Haji</option>
+          </select>
+        </Field>
+        <Field label={t('Kelas')}><input className="inp" value={cls} onChange={(e) => setCls(e.target.value)} placeholder="economy / business / vip" /></Field>
+        <Field label={t('Durasi (hari)')}><input className="inp" type="number" min={1} value={days} onChange={(e) => setDays(e.target.value)} /></Field>
+        <Field label={t('Kota keberangkatan')}><input className="inp" value={departureCity} onChange={(e) => setDepartureCity(e.target.value)} placeholder="Jakarta" /></Field>
+      </div>
+      <Field label={t('Ringkasan (Indonesia)')}><textarea className="inp" rows={2} value={summaryId} onChange={(e) => setSummaryId(e.target.value)} /></Field>
+      <Field label={t('Ringkasan (English)')}><textarea className="inp" rows={2} value={summaryEn} onChange={(e) => setSummaryEn(e.target.value)} /></Field>
+      <Field label={t('Termasuk (satu baris satu)')}><textarea className="inp" rows={4} value={includes} onChange={(e) => setIncludes(e.target.value)} placeholder={'Tiket pesawat PP\nAkomodasi hotel bintang 5\nVisa umrah'} /></Field>
+      <Field label={t('Tidak termasuk (opsional)')}><textarea className="inp" rows={2} value={excludes} onChange={(e) => setExcludes(e.target.value)} placeholder={'Pengeluaran pribadi\nObat-obatan'} /></Field>
+
+      <p className="sm" style={{ fontWeight: 600, marginTop: 12, marginBottom: 6 }}>{t('Kamar (harga dasar HPP per orang)')}</p>
+      <div className="pkg-occ-grid">
+        {occs.map((o, i) => (
+          <Field key={o.type} label={OCC_LABELS[o.type] ?? o.type}>
+            <input className="inp" type="number" min={0} value={o.basePrice} onChange={(e) => setOccs((prev) => prev.map((x, j) => j === i ? { ...x, basePrice: e.target.value } : x))} placeholder="0" />
+          </Field>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 6 }}>
+        <p className="sm" style={{ fontWeight: 600 }}>{t('Layanan tambahan (add-on)')}</p>
+        <Button small kind="ghost" onClick={() => setAddOns((p) => [...p, { nameId: '', nameEn: '', price: '', perPerson: true }])}>{t('+ Tambah')}</Button>
+      </div>
+      {addOns.length === 0 && <p className="sm mut">{t('Belum ada add-on.')}</p>}
+      {addOns.map((a, i) => (
+        <div key={i} className="pkg-addon-row">
+          <input className="inp sm" value={a.nameId} onChange={(e) => setAddOns((p) => p.map((x, j) => j === i ? { ...x, nameId: e.target.value } : x))} placeholder={t('Nama (Indonesia)')} />
+          <input className="inp sm" value={a.nameEn} onChange={(e) => setAddOns((p) => p.map((x, j) => j === i ? { ...x, nameEn: e.target.value } : x))} placeholder="Name (English)" />
+          <input className="inp sm" type="number" min={0} value={a.price} onChange={(e) => setAddOns((p) => p.map((x, j) => j === i ? { ...x, price: e.target.value } : x))} placeholder="0" />
+          <label className="row sm"><input type="checkbox" checked={a.perPerson} onChange={(e) => setAddOns((p) => p.map((x, j) => j === i ? { ...x, perPerson: e.target.checked } : x))} /> {t('per orang')}</label>
+          <button className="comm-expand-btn" onClick={() => setAddOns((p) => p.filter((_, j) => j !== i))}>✕</button>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 6 }}>
+        <p className="sm" style={{ fontWeight: 600 }}>{t('Kebijakan pembatalan')}</p>
+        <Button small kind="ghost" onClick={() => setCancels((p) => [...p, { minDays: '', maxDays: '', pct: '' }])}>{t('+ Tambah')}</Button>
+      </div>
+      {cancels.length === 0 && <p className="sm mut">{t('Belum ada kebijakan.')}</p>}
+      {cancels.map((c, i) => (
+        <div key={i} className="pkg-cx-row">
+          <Field label={t('Min hari')}><input className="inp sm" type="number" value={c.minDays} onChange={(e) => setCancels((p) => p.map((x, j) => j === i ? { ...x, minDays: e.target.value } : x))} placeholder="0" /></Field>
+          <Field label={t('Max hari (kosong = tak terbatas)')}><input className="inp sm" type="number" value={c.maxDays} onChange={(e) => setCancels((p) => p.map((x, j) => j === i ? { ...x, maxDays: e.target.value } : x))} placeholder={t('Tak terbatas')} /></Field>
+          <Field label={t('% biaya batal')}><input className="inp sm" type="number" value={c.pct} onChange={(e) => setCancels((p) => p.map((x, j) => j === i ? { ...x, pct: e.target.value } : x))} placeholder="0" /></Field>
+          <button className="comm-expand-btn" style={{ alignSelf: 'flex-end', marginBottom: 4 }} onClick={() => setCancels((p) => p.filter((_, j) => j !== i))}>✕</button>
+        </div>
+      ))}
+
+      <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
+        <Button kind="ghost" onClick={onCancel}>{t('Batal')}</Button>
+        <Button onClick={submit}>{initial?.id ? t('Simpan perubahan') : t('Buat paket')}</Button>
+      </div>
+    </div>
+  );
+}
+
+function Packages() {
+  const pkgs = api.packages();
+  const [editing, setEditing] = useState<string | null>(null); // pkg id or 'new'
+  const editPkg = pkgs.find((p) => p.id === editing);
+
+  const advanceStatus = (p: import('../data/types.ts').Pkg) => {
+    const next = STATUS_FLOW[p.status] as import('../data/types.ts').Pkg['status'];
+    if (next === 'published') { if (!confirm(t('Publikasikan paket ini? Mitra bisa melihat dan menjual.'))) return; }
+    if (next === 'draft') { if (!confirm(t('Kembalikan ke draft? Paket tidak akan tampil ke mitra.'))) return; }
+    run(() => api.savePackage({ id: p.id, status: next }), `Status diubah ke ${STATUS_LABEL[next]}.`);
+  };
+
+  if (editing === 'new' || (editing && editPkg)) {
+    return (
+      <Card title={editing === 'new' ? t('Paket baru') : `${t('Edit')} · ${editPkg!.name}`}>
+        <PkgForm
+          initial={editPkg}
+          onSave={(data) => run(() => api.savePackage(data), editing === 'new' ? 'Paket dibuat.' : 'Paket diperbarui.')}
+          onCancel={() => setEditing(null)}
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <Button onClick={() => setEditing('new')}>{t('+ Paket baru')}</Button>
+      </div>
+      {pkgs.length === 0 ? (
+        <Card><Empty>{t('Belum ada paket. Buat paket pertama Anda.')}</Empty></Card>
+      ) : (
+        <div className="pkg-list">
+          {pkgs.map((p) => (
+            <Card key={p.id}>
+              <div className="pkg-card-header">
+                <div>
+                  <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700 }}>{p.name}</span>
+                    <Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
+                    <Badge tone="gray">{p.category.toUpperCase()}</Badge>
+                    <span className="mut sm">{p.days} hari · {p.cls}</span>
+                  </div>
+                  {p.summaryId && <p className="sm mut" style={{ marginTop: 4 }}>{p.summaryId}</p>}
+                </div>
+                <div className="row" style={{ gap: 8 }}>
+                  <Button small kind="ghost" onClick={() => setEditing(p.id)}>{t('Edit')}</Button>
+                  <Button small kind={p.status === 'published' ? 'ghost' : 'primary'} onClick={() => advanceStatus(p)}>
+                    {p.status === 'draft' ? t('→ Segera hadir') : p.status === 'coming_soon' ? t('→ Publikasikan') : t('→ Draft')}
+                  </Button>
+                </div>
+              </div>
+              {(p.occupancy?.length ?? 0) > 0 && (
+                <div className="pkg-occ-summary">
+                  {p.occupancy!.map((o) => (
+                    <span key={o.type} className="pkg-occ-chip"><span className="mut">{OCC_LABELS[o.type]}</span> {rp(o.basePrice)}</span>
+                  ))}
+                </div>
+              )}
+              {(p.addOns?.length ?? 0) > 0 && (
+                <p className="sm mut" style={{ marginTop: 4 }}>{p.addOns!.length} {t('add-on')} · {p.addOns!.map((a) => a.nameId).join(', ')}</p>
+              )}
+              {(p.includes?.length ?? 0) > 0 && (
+                <details style={{ marginTop: 6 }}>
+                  <summary className="sm" style={{ cursor: 'pointer', color: 'var(--acc)' }}>{t('Lihat termasuk')} ({p.includes.length})</summary>
+                  <ul className="sm mut" style={{ margin: '4px 0 0 16px', padding: 0 }}>{p.includes.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                </details>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 

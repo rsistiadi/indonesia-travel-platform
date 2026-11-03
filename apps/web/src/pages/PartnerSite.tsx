@@ -3,6 +3,7 @@ import { api } from '../data/api.ts';
 import { Badge, Button, Card, Empty, Field, MoneyInput, OrderBadge, go, run, useApi } from '../core.tsx';
 import { dyn, fdate, fdt, rp, t, useLang } from '../i18n.ts';
 import { Maiya } from './Maiya.tsx';
+import { KaabaIllustration, MinaretIllustration } from '../illustrations.tsx';
 import type { Partner } from '../data/types.ts';
 import type * as T from '../data/types.ts';
 
@@ -44,7 +45,10 @@ function Body({ p, sub }: { p: Partner; sub: string[] }) {
 function SignInPrompt({ p, staffNote }: { p: Partner; staffNote: boolean }) {
   return (
     <>
-      <div className="hero"><h1>{t('Umrah bersama {0}', p.name)}</h1><p>{t('Paket resmi dari Maidaa Umrah Services, dijual melalui {0}. Masuk untuk melihat harga dan memesan.', p.name)}</p></div>
+      <div className="hero hero-illustrated">
+        <div className="hero-text"><h1>{t('Umrah bersama {0}', p.name)}</h1><p>{t('Paket resmi dari Maidaa Umrah Services, dijual melalui {0}. Masuk untuk melihat harga dan memesan.', p.name)}</p></div>
+        <KaabaIllustration size={180} className="hero-illus" />
+      </div>
       <Card title={t('Masuk')}>
         {staffNote && <p className="mut">{t('Akun yang aktif bukan akun pembeli.')}</p>}
         <p>{t('Mode contoh: pilih akun pembeli.')}</p>
@@ -88,7 +92,10 @@ function Catalog({ p }: { p: Partner }) {
   const items = api.catalog(p.id).filter((c) => f === 'all' || c.pkg.category === f);
   return (
     <>
-      <div className="hero"><h1>{t('Pilih paket Anda')}</h1><p>{t('Harga sudah final dan disepakati antara {0} dan Maidaa. Kursi dipakai bersama semua saluran, jadi sisa kursi selalu terkini.', p.name)}</p></div>
+      <div className="hero hero-illustrated">
+        <div className="hero-text"><h1>{t('Pilih paket Anda')}</h1><p>{t('Harga sudah final dan disepakati antara {0} dan Maidaa. Kursi dipakai bersama semua saluran, jadi sisa kursi selalu terkini.', p.name)}</p></div>
+        <MinaretIllustration size={160} className="hero-illus" />
+      </div>
       <div className="row" style={{ marginBottom: 14 }}>{(['all', 'umrah', 'haji'] as const).map((k) => <Button key={k} small kind={f === k ? 'primary' : 'ghost'} onClick={() => setF(k)}>{t(k === 'all' ? 'Semua' : k === 'umrah' ? 'Umrah' : 'Haji')}</Button>)}</div>
       {items.length === 0 ? <Empty>{t('Belum ada paket.')}</Empty> : <div className="grid g3">{items.map((c) => <PackageCard key={c.depId ?? c.pkg.id} c={c} onOrder={c.depId ? () => go(`/p/${p.slug}/pkg/${c.depId}`) : null} />)}</div>}
     </>
@@ -133,6 +140,7 @@ function PackageDetail({ p, depId }: { p: Partner; depId: string }) {
       <div className="pkg-main">
         {/* Hero */}
         <section id="sec-summary" className={`pkg-hero ${pkg.cls === 'premium' ? 'premium' : 'economy'}`}>
+          <MinaretIllustration size={220} className="pkg-hero-illus" />
           <Badge tone={pkg.category === 'haji' ? 'blue' : 'green'}>{t(pkg.category === 'umrah' ? 'Umrah' : pkg.category === 'haji' ? 'Haji' : 'Tanah suci')}</Badge>
           <h1>{t(pkg.name)}</h1>
           <p className="hero-sub">{dyn(pkg.summaryId, pkg.summaryEn)}</p>
