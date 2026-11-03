@@ -28,24 +28,54 @@ function Console() {
 }
 
 function Pipeline() {
-  const rows = api.pipeline(); const live = rows.filter((o) => !['cancelled', 'expired'].includes(o.status));
-  const sum = (f: (o: (typeof rows)[number]) => number) => live.filter((o) => ['paid', 'fulfilling', 'ready'].includes(o.status)).reduce((a, o) => a + f(o), 0);
+  const rows = api.pipeline();
+  const active = rows.filter((o) => !['cancelled', 'expired'].includes(o.status));
+  const confirmed = active.filter((o) => ['paid', 'fulfilling', 'ready'].includes(o.status));
+  const needsAction = active.filter((o) => ['paid', 'payment_review', 'financing_review'].includes(o.status));
+  const sum = (f: (o: (typeof rows)[number]) => number) => confirmed.reduce((a, o) => a + f(o), 0);
   const by = (s: string) => rows.filter((o) => o.status === s).length;
+  const rev = sum((o) => o.total);
+  const net = sum((o) => o.money.net);
+  const partnerTotal = sum((o) => o.money.partnerPayout);
+  const platformTotal = sum((o) => o.money.platformShare);
+
   return (
     <>
+      {/* KPI row */}
       <div className="grid g4" style={{ marginBottom: 16 }}>
-        <Stat label={t('Menunggu pembayaran')} value={by('awaiting_payment')} /><Stat label={t('Perlu diperiksa')} value={by('payment_review') + by('financing_review')} />
-        <Stat label={t('Penjualan lunas')} value={rp(sum((o) => o.total))} sub={`${t('Margin bersih')}: ${rp(sum((o) => o.money.net))}`} /><Stat label={t('Siap diproses')} value={by('paid') + by('fulfilling')} />
+        <Stat label={t('Penjualan lunas')} value={rp(rev)} sub={`${active.length} ${t('aktif')}`} />
+        <Stat label={t('Margin bersih')} value={rp(net)} sub={`HPP: ${rp(sum((o) => o.money.hppTotal))}`} />
+        <Stat label={t('Komisi mitra (total)')} value={rp(partnerTotal)} sub={`${t('Platform')}: ${rp(platformTotal)}`} />
+        <Stat label={t('Perlu tindakan')} value={needsAction.length} sub={`${t('Menunggu bayar')}: ${by('awaiting_payment')}`} />
       </div>
+
+      {/* Urgent actions card */}
+      {needsAction.length > 0 && (
+        <Card title={`⚡ ${t('Perlu tindakan sekarang')}`}>
+          <Table head={['Kode', 'Mitra', 'Pembeli', 'Paket', 'Total', 'Status', 'Aksi']} rows={needsAction.map((o) => [
+            <b key="c">{o.code}</b>, o.partnerName, o.buyer, `${t(o.pkgName)} · ${fdate(o.date)} · ${o.pax}p`, rp(o.total),
+            <OrderBadge key="s" s={o.status} />,
+            <span key="a" className="row">
+              {o.status === 'paid' && <Button small onClick={() => run(() => api.advanceOrder(o.id, 'fulfilling'), 'Diproses.')}>{t('Mulai proses')}</Button>}
+              {['awaiting_payment', 'payment_review', 'financing_review', 'paid'].includes(o.status) && <Button small kind="ghost" onClick={() => { if (confirm(t('Batalkan pesanan ini?'))) run(() => api.advanceOrder(o.id, 'cancelled'), 'Pesanan dibatalkan.'); }}>{t('Batalkan')}</Button>}
+            </span>])} />
+        </Card>
+      )}
+
+      {/* Full order table */}
       <Card title={t('Semua pesanan')}>
         {rows.length === 0 ? <Empty>{t('Belum ada pesanan.')}</Empty> :
-          <Table head={['Kode', 'Mitra', 'Pembeli', 'Paket', 'Total', 'Margin bersih', 'Status', 'Aksi']} rows={rows.map((o) => [
-            <b key="c">{o.code}</b>, o.partnerName, o.buyer, `${t(o.pkgName)} · ${fdate(o.date)} · ${o.pax}`, rp(o.total), <span key="m" className={o.money.net < 0 ? 'bad' : ''}>{rp(o.money.net)}{o.money.placeholder && ' *'}</span>, <OrderBadge key="s" s={o.status} />,
+          <Table head={['Kode', 'Mitra', 'Pembeli', 'Paket', 'Total', 'Net', 'Mitra', 'Status', 'Aksi']} rows={rows.map((o) => [
+            <b key="c">{o.code}</b>, o.partnerName, o.buyer, `${t(o.pkgName)} · ${fdate(o.date)} · ${o.pax}p`, rp(o.total),
+            <span key="m" className={o.money.net < 0 ? 'bad' : ''}>{rp(o.money.net)}{o.money.placeholder && ' *'}</span>,
+            <span key="p" className="mut">{rp(o.money.partnerPayout)}</span>,
+            <OrderBadge key="s" s={o.status} />,
             <span key="a" className="row">
               {o.status === 'paid' && <Button small onClick={() => run(() => api.advanceOrder(o.id, 'fulfilling'), 'Diproses.')}>{t('Mulai proses')}</Button>}
               {o.status === 'fulfilling' && <Button small onClick={() => run(() => api.advanceOrder(o.id, 'ready'), 'Siap berangkat.')}>{t('Tandai siap')}</Button>}
               {['awaiting_payment', 'payment_review', 'financing_review', 'paid', 'fulfilling'].includes(o.status) && <Button small kind="ghost" onClick={() => { if (confirm(t('Batalkan pesanan ini?'))) run(() => api.advanceOrder(o.id, 'cancelled'), 'Pesanan dibatalkan.'); }}>{t('Batalkan')}</Button>}
-              {o.holdExpires && ['awaiting_payment'].includes(o.status) && <span className="mut sm">{t('tahan sampai')} {fdt(o.holdExpires)}</span>}</span>])} />}
+              {o.holdExpires && ['awaiting_payment'].includes(o.status) && <span className="mut sm">{fdt(o.holdExpires)}</span>}
+            </span>])} />}
         <p className="sm mut">* {t('Memakai pajak sementara (placeholder).')}</p>
       </Card>
     </>
