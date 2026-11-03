@@ -321,6 +321,22 @@ export class Api {
     this.s.departures.push({ id: uid('d'), packageId, date, capacity, soldOutside: 0, status: 'open', hpp }); this.log('departure_added', `${packageId} ${date}`); this.emit();
   }
   packages() { return this.s.packages; }
+  /** Buyer-facing package detail with per-occupancy selling prices. Never exposes base price or margin. */
+  packageDetail(pid: string, depId: string) {
+    this.expire();
+    const dep = this.s.departures.find((d) => d.id === depId);
+    if (!dep || dep.status === 'cancelled') return null;
+    const pkg = this.s.packages.find((p) => p.id === dep.packageId);
+    if (!pkg || pkg.status === 'draft') return null;
+    const ag = this.live(pid, dep.packageId);
+    const left = this.seatsLeft(dep.id);
+    let occupancyPrices: { type: T.OccupancyType; price: number }[] = [];
+    if (ag && pkg.occupancy?.length) {
+      const lowestBase = Math.min(...pkg.occupancy.map((o) => o.basePrice));
+      occupancyPrices = pkg.occupancy.map((o) => ({ type: o.type, price: ag.price + (o.basePrice - lowestBase) }));
+    }
+    return { pkg, date: dep.date, left, availability: (!ag ? 'coming_soon' : left === 0 ? 'sold_out' : 'available') as 'available' | 'sold_out' | 'coming_soon', startingPrice: ag?.price ?? null, occupancyPrices, addOns: pkg.addOns ?? [], cancellation: pkg.cancellation ?? [], terms: pkg.terms ?? null, depId: dep.id };
+  }
   finApps() {
     const u = this.need('financier_analyst', 'maidaa_staff', 'platform_admin'); this.expire();
     return this.s.fin.filter((f) => u.role !== 'financier_analyst' || f.financierId === u.financierId).map((f) => {
