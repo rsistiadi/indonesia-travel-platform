@@ -65,21 +65,25 @@ const ROLE_HOME: Record<string, string> = { buyer: '/p/idi', partner_admin: '', 
 export function DemoBar() {
   useApi();
   const me = api.me();
+  const route = useRoute();
+  const home = route === '/' || route === '';
   return (
     <div className="demobar">
       <strong>{t('MODE DEMO')}</strong>
-      <span className="hide-sm">{t('Data contoh, tersimpan di peramban ini.')}</span>
-      <select aria-label={t('Masuk sebagai')} value={me?.id ?? ''} onChange={(e) => {
+      <span className="hide-sm">{t('Data contoh, tersimpan di browser.')}</span>
+      <select aria-label={t('Masuk sebagai')} value={home ? '__home' : me?.id ?? ''} onChange={(e) => {
+        if (e.target.value === '__home') { api.signIn(null); return go('/'); }
         const id = e.target.value || null; api.signIn(id); const u = api.users().find((x) => x.id === id);
-        if (!u) return go('/');
+        if (!u) return go('/p/idi');
         if (u.role === 'partner_admin') go('/admin/' + api.partners().find((p) => p.id === u.partnerId)?.slug);
         else if (u.role === 'buyer') go('/p/idi');
         else go(ROLE_HOME[u.role]);
       }}>
+        <option value="__home">{t('Beranda (awal demo)')}</option>
         <option value="">{t('Belum masuk (tamu)')}</option>
         {api.users().map((u) => <option key={u.id} value={u.id}>{u.name} · {roleLabel(u.role)}</option>)}
       </select>
-      <a href="#/" className="lnk">{t('Beranda')}</a>
+      <a href="#/" className="lnk" onClick={() => api.signIn(null)}>{t('Beranda')}</a>
       <button className="lnk" onClick={() => { if (confirm(t('Kembalikan semua data contoh ke awal?'))) { api.reset(); } }}>{t('Reset data')}</button>
       <LangToggle />
     </div>
