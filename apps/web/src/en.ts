@@ -1,4 +1,7 @@
 export const EN: Record<string, string> = {
+ "Pesanan diterima": "Order received",
+ "Terima kasih, pesanan {0} sudah diterima. Status: menunggu proses pembiayaan. Tim Amitra akan segera menghubungi Anda.": "Thank you, order {0} has been received. Status: awaiting financing approval. The Amitra team will contact you shortly.",
+ "Terima kasih, pesanan {0} sudah diterima. Silakan selesaikan pembayaran di bawah ini; tim kami akan memverifikasi setelah bukti transfer diunggah.": "Thank you, order {0} has been received. Please complete payment below; our team will verify it once your transfer proof is uploaded.",
  "Masuk sebagai pembeli untuk menghubungi tim.": "Sign in as a buyer to contact the team.",
  "Biaya transfer (Rp)": "Transfer fee (Rp)",
  "Biaya kartu (%)": "Card fee (%)",

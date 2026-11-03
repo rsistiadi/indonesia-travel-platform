@@ -230,7 +230,8 @@ function PackageDetail({ p, depId }: { p: Partner; depId: string }) {
           <section id="sec-addons"><h2>{t('Tambahan opsional')}</h2>
             <Card>{addOns.map((a) => (
               <div key={a.id} className="addon-row">
-                <span>{dyn(a.nameId, a.nameEn)}</span>
+                <span />
+                <span className="addon-name">{dyn(a.nameId, a.nameEn)}</span>
                 <span className="addon-price">{rp(a.price)} {a.perPerson ? `/ ${t('orang')}` : `/ ${t('rombongan')}`}</span>
               </div>
             ))}</Card>
@@ -379,12 +380,10 @@ function Checkout({ p, depId }: { p: Partner; depId: string }) {
           <Card title={t('Layanan tambahan (opsional)')} style={{ marginTop: 12 }}>
             <p className="sm mut" style={{ marginBottom: 8 }}>{t('Layanan di bawah bisa dipesan terpisah setelah pemesanan diproses.')}</p>
             {addOns.map((a) => (
-              <label key={a.id} className="addon-row" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', borderBottom: '1px solid var(--br)' }}>
+              <label key={a.id} className="addon-row" style={{ cursor: 'pointer' }}>
                 <input type="checkbox" checked={checkedAddOns.has(a.id)} onChange={() => toggleAddOn(a.id)} />
-                <div style={{ flex: 1 }}>
-                  <div>{dyn(a.nameId, a.nameEn)}</div>
-                </div>
-                <div style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>+ {rp(a.price)}{a.perPerson && <span className="sm mut"> /orang</span>}</div>
+                <span className="addon-name">{dyn(a.nameId, a.nameEn)}</span>
+                <span className="addon-price">+ {rp(a.price)}{a.perPerson && <span className="sm mut"> /orang</span>}</span>
               </label>
             ))}
           </Card>
@@ -406,7 +405,7 @@ function Checkout({ p, depId }: { p: Partner; depId: string }) {
             <span className="t">{t('Pembayaran pertama')}</span><span className="t">{rp(fq.firstPayment)}</span>
             <span>{t('Cicilan per bulan')}</span><span>{rp(fq.instalment)} × {tenor}</span>
             <span>{t('Total biaya pembiayaan')}</span><span>{rp(fq.totalCost)}</span><span>{t('Lebih mahal dari tunai')}</span><span>{rp(fq.extra)}</span></div>}
-          <div style={{ marginTop: 14 }}><Button disabled={!occ || q.invalid || left < pax} onClick={() => { let id = ''; if (run(() => { id = api.placeOrder({ partnerId: p.id, departureId: depId, pax, method, codeText, tenor: method === 'financing' ? tenor : undefined, occupancyType: occ! }).id; }, 'Pesanan dibuat.')) go(`/p/${p.slug}/o/${id}`); }}>{t('Buat pesanan')}</Button></div>
+          <div style={{ marginTop: 14 }}><Button disabled={!occ || q.invalid || left < pax} onClick={() => { let id = ''; if (run(() => { id = api.placeOrder({ partnerId: p.id, departureId: depId, pax, method, codeText, tenor: method === 'financing' ? tenor : undefined, occupancyType: occ! }).id; }, 'Pesanan dibuat.')) { try { sessionStorage.setItem('itp.justCreated', id); } catch {} go(`/p/${p.slug}/o/${id}`); } }}>{t('Buat pesanan')}</Button></div>
           {!occ && <p className="sm mut" style={{ marginTop: 6 }}>{t('Pilih tipe kamar untuk mengaktifkan tombol.')}</p>}
         </> : <Empty>{t('Harga belum tersedia.')}</Empty>}
       </Card>
@@ -425,6 +424,12 @@ function Countdown({ to }: { to: string }) {
 function OrderPage({ p, id }: { p: Partner; id: string }) {
   const o = api.buyerOrder(id);
   const [amount, setAmount] = useState(0); const [proof, setProof] = useState(''); const [note, setNote] = useState('');
+  const [justCreated] = useState(() => {
+    try {
+      if (sessionStorage.getItem('itp.justCreated') === id) { sessionStorage.removeItem('itp.justCreated'); return true; }
+    } catch {}
+    return false;
+  });
   if (!o) return <Card title={t('Pesanan tidak ditemukan')}><Button onClick={() => go(`/p/${p.slug}/orders`)}>{t('Kembali')}</Button></Card>;
   const dep = api.catalog(p.id).find((c) => c.depId === o.departureId);
   const pkg = api.packages().find((x) => x.id === o.packageId)!;
@@ -433,6 +438,13 @@ function OrderPage({ p, id }: { p: Partner; id: string }) {
   return (
     <div className="grid split">
       <div>
+        {justCreated && (
+          <Card tone="ok" title={`✅ ${t('Pesanan diterima')}`}>
+            <p className="sm">{o.method === 'financing'
+              ? t('Terima kasih, pesanan {0} sudah diterima. Status: menunggu proses pembiayaan. Tim Amitra akan segera menghubungi Anda.', o.code)
+              : t('Terima kasih, pesanan {0} sudah diterima. Silakan selesaikan pembayaran di bawah ini; tim kami akan memverifikasi setelah bukti transfer diunggah.', o.code)}</p>
+          </Card>
+        )}
         <Card title={`${t('Pesanan')} ${o.code}`} right={<OrderBadge s={o.status} />}>
           <div className="sum"><span>{t('Paket')}</span><span>{t(pkg.name)}</span><span>{t('Berangkat')}</span><span>{fdate(dep?.date ?? api.state.departures.find((d) => d.id === o.departureId)?.date)}</span>
             <span>{t('Peserta')}</span><span>{o.pax}</span><span className="t">{t('Total')}</span><span className="t">{rp(o.total)}</span>

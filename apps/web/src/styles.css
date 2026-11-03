@@ -90,10 +90,13 @@ span.bad,p.bad{color:var(--bad-ink)}.toast.bad{color:#fff}
 .pkg-hero .hero-price .per{font-size:.85rem;opacity:.8}
 .pkg-hero .badge{background:#fff3;color:#fff}
 
-/* Sticky nav */
-.pkg-nav{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 0 20px;padding:0}
+/* Sticky nav — sits just below the sticky demo bar (60px), not behind it */
+.pkg-nav{position:sticky;top:60px;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 0 20px;padding:0}
 .pkg-nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;cursor:pointer;white-space:nowrap;font-weight:600;color:var(--mut);font-size:.88rem}
 .pkg-nav button.on{color:var(--ink);border-bottom-color:var(--acc)}
+/* Keep section headings clear of both sticky bars (demobar + pkg-nav) when jumped to */
+.pkg-main section{scroll-margin-top:116px}
+@media(max-width:480px){.pkg-nav{top:100px}.pkg-main section{scroll-margin-top:156px}}
 
 /* Itinerary timeline */
 .itin-list{display:flex;flex-direction:column;gap:0}
@@ -128,8 +131,12 @@ span.bad,p.bad{color:var(--bad-ink)}.toast.bad{color:#fff}
 .occ-per{font-size:.78rem;color:var(--mut)}
 
 /* Add-on rows */
-.addon-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.addon-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .addon-row:last-child{border-bottom:0}
+.addon-row input[type="checkbox"]{width:18px;height:18px;flex:none;margin:0}
+.addon-row .addon-name{min-width:0}
+.addon-row .addon-price{text-align:right;font-weight:600;white-space:nowrap}
+.addon-row .addon-hint{grid-column:2 / 3;font-size:.8rem}
 .addon-price{font-weight:600;white-space:nowrap}
 
 /* Commission detail panel (expandable row) */
