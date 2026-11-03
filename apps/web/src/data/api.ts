@@ -41,8 +41,15 @@ export class Api {
   private fresh(): T.State {
     const prev = this.s; const st = seedState(); this.s = st; this.system = true;
     // sample members and orders so every console has something to review
-    const mk = (id: string, pid: string, name: string, no: string, st2: T.Member['status']): T.Member => ({ id, partnerId: pid, userId: id === 'm-siti' ? 'u-siti' : 'x-' + id, memberNo: no, name, phone: '0811', relation: 'member', status: st2, at: now() });
-    st.members.push(mk('m-siti', 'p-idi', 'dr. Siti Rahma', 'IDI-0412', 'approved'), mk('m-ahmad', 'p-idi', 'dr. Ahmad Fauzi', 'IDI-0990', 'pending'), mk('m-lina', 'p-idi', 'dr. Lina Marlina', 'IDI-1180', 'approved'));
+    const mk = (id: string, uid2: string, pid: string, name: string, no: string, phone: string, st2: T.Member['status']): T.Member =>
+      ({ id, partnerId: pid, userId: uid2, memberNo: no, name, phone, relation: 'member', status: st2, at: now() });
+    st.members.push(
+      mk('m-siti', 'u-siti', 'p-idi', 'dr. Siti Rahma', 'IDI-0412', '0811 2233 4455', 'approved'),
+      mk('m-ahmad', 'u-ahmad', 'p-idi', 'dr. Ahmad Fauzi', 'IDI-0990', '0812 3456 7890', 'approved'),
+      mk('m-budi', 'u-budi', 'p-idi', 'dr. Budi Santoso', 'IDI-1501', '0813 9876 5432', 'approved'),
+      mk('m-lina', 'x-m-lina', 'p-idi', 'dr. Lina Marlina', 'IDI-1180', '0814 5555 6666', 'approved'),
+      mk('m-pending', 'x-m-pending', 'p-idi', 'dr. Dewi Kartika', 'IDI-2200', '0815 1111 2222', 'pending'),
+    );
     const mkOrder = (m: string, dep: string, pax: number, method: 'transfer' | 'financing', code: string | null, finish?: 'payment_review' | 'paid') => {
       const o = this._place({ memberId: m, departureId: dep, pax, method, codeText: code, tenor: method === 'financing' ? 24 : undefined });
       if (finish === 'payment_review' || finish === 'paid') {
@@ -51,9 +58,17 @@ export class Api {
       }
       return o;
     };
+    // dr. Lina: ECO 2 pax paid + HRM 1 pax payment under review
     mkOrder('m-lina', 'd-eco1', 2, 'transfer', 'IDI-2026', 'paid');
     mkOrder('m-lina', 'd-hrm1', 1, 'transfer', null, 'payment_review');
+    // dr. Ahmad: HRM 2 pax paid (premium trip)
+    mkOrder('m-ahmad', 'd-hrm1', 2, 'transfer', null, 'paid');
+    // dr. Budi: ECO 4 pax awaiting payment (family trip)
+    mkOrder('m-budi', 'd-eco1', 4, 'transfer', null);
+    // dr. Siti: ECO 1 pax financing (Amitra)
     mkOrder('m-siti', 'd-eco2', 1, 'financing', null);
+    // dr. Siti: HRM 2 pax financing with code
+    mkOrder('m-siti', 'd-hrm2', 2, 'financing', 'IDI-2026');
     this.system = false; this.s = prev ?? st; return st;
   }
   reset() { this.s = this.fresh(); this.emit(); }

@@ -1,7 +1,68 @@
+export type OccupancyType = 'quad' | 'triple' | 'double' | 'single';
+
+export interface HotelInfo {
+  city: 'makkah' | 'madinah';
+  name: string;
+  nameEn: string;
+  stars: number;
+  distanceM: number;
+  meals: string;
+  mealsEn: string;
+}
+
+export interface FlightInfo {
+  airline: string;
+  routeId: string;
+  routeEn: string;
+  baggage: string;
+  baggageEn: string;
+}
+
+export interface ItineraryDay {
+  day: number;
+  titleId: string;
+  titleEn: string;
+  descId: string;
+  descEn: string;
+}
+
+export interface OccupancyOption {
+  type: OccupancyType;
+  basePrice: number;
+}
+
+export interface AddOnItem {
+  id: string;
+  nameId: string;
+  nameEn: string;
+  price: number;
+  perPerson: boolean;
+}
+
+export interface CancellationRule {
+  minDays: number;
+  maxDays: number | null;
+  pct: number;
+}
+
+export interface PkgTerms {
+  docsId: string[];
+  docsEn: string[];
+  paymentId: string;
+  paymentEn: string;
+}
+
 export type Role = 'buyer' | 'partner_admin' | 'maidaa_staff' | 'financier_analyst' | 'platform_admin';
 export interface User { id: string; name: string; role: Role; partnerId?: string; financierId?: string; phone?: string }
 export interface Partner { id: string; slug: string; name: string; kind: 'organization' | 'individual'; eligibility: 'manual' | 'roster' | 'none'; allowCodes: boolean; active: boolean; color: string; roster: string[] }
-export interface Pkg { id: string; code: string; name: string; category: 'umrah' | 'holyland' | 'haji'; cls: string; days: number; summaryId: string; summaryEn: string; includes: string[]; taxClass: string | null; status: 'draft' | 'published' | 'coming_soon' }
+export interface Pkg {
+  id: string; code: string; name: string; category: 'umrah' | 'holyland' | 'haji'; cls: string; days: number;
+  summaryId: string; summaryEn: string; includes: string[]; excludes?: string[]; taxClass: string | null;
+  status: 'draft' | 'published' | 'coming_soon';
+  hotels?: HotelInfo[]; flights?: FlightInfo[]; itinerary?: ItineraryDay[];
+  occupancy?: OccupancyOption[]; addOns?: AddOnItem[]; cancellation?: CancellationRule[];
+  terms?: PkgTerms; departureCity?: string;
+}
 export interface Departure { id: string; packageId: string; date: string; capacity: number; soldOutside: number; status: 'open' | 'closed' | 'cancelled'; hpp: number }
 export interface Agreement { id: string; partnerId: string; packageId: string; price: number; marketRef: number | null; mode: 'pct_of_net' | 'fixed_per_pax'; pct: number; fixed: number; status: 'proposed' | 'live' | 'superseded' | 'rejected'; maidaaAt: string | null; partnerAt: string | null; liveFrom: string | null; createdAt: string }
 export interface Code { id: string; partnerId: string; code: string; mode: 'idr' | 'pct'; value: number; ownerPhone: string | null; allowSelf: boolean; active: boolean }
