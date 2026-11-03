@@ -36,8 +36,34 @@ function Panel({ p }: { p: Partner }) {
   );
 }
 
+function CommDetail({ r }: { r: ReturnType<typeof api.commissions>[number] }) {
+  const methodLabel = r.method === 'financing' ? t('Pembiayaan') : r.method === 'card' ? t('Kartu kredit') : t('Transfer bank');
+  return (
+    <div className="comm-detail">
+      <div>
+        <div className="comm-detail-row sm mut"><span>{t('Harga per orang')}</span><span>{rp(r.unit)}</span></div>
+        {r.discountPerPax > 0 && <div className="comm-detail-row sm mut"><span>{t('Diskon per orang')}</span><span className="comm-detail-neg">−{rp(r.discountPerPax)}</span></div>}
+        <div className="comm-detail-row sm mut"><span>{t('Metode bayar')}</span><span>{methodLabel}{r.tenor ? ` · ${r.tenor} ${t('bulan')}` : ''}</span></div>
+        <div className="comm-detail-row sm mut"><span>{t('Jumlah peserta')}</span><span>{r.pax} orang</span></div>
+      </div>
+      <div>
+        <p className="sm mut" style={{ fontWeight: 600, marginBottom: 4 }}>{t('Rincian komisi')}</p>
+        <div className="comm-detail-row sm"><span>{t('Komisi kotor')}</span><span>{rp(r.partnerShare)}</span></div>
+        {r.withheld > 0
+          ? <div className="comm-detail-row sm comm-detail-neg"><span>{t('Pajak penghasilan (PPh)')}</span><span>−{rp(r.withheld)}</span></div>
+          : <div className="comm-detail-row sm mut"><span>{t('Pajak penghasilan (PPh)')}</span><span>{t('Belum ada PPh ditahan.')}</span></div>}
+        <div className="comm-detail-sep" />
+        <div className="comm-detail-row sm comm-detail-total"><span>{t('Komisi bersih (diterima)')}</span><span>{rp(r.commission)}</span></div>
+        {r.paidOut && <div className="comm-detail-row sm" style={{ color: 'var(--green, #1a7d3d)' }}><span /><span>✓ {t('Sudah dibayarkan Maidaa')}</span></div>}
+      </div>
+    </div>
+  );
+}
+
 function Orders({ p }: { p: Partner }) {
   const rows = api.commissions(p.id);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setExpanded((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   const earned = rows.filter((r) => ['paid', 'fulfilling', 'ready'].includes(r.status)).reduce((a, r) => a + r.commission, 0);
   const paidOut = rows.filter((r) => r.paidOut).reduce((a, r) => a + r.commission, 0);
   const inflight = rows.filter((r) => ['awaiting_payment', 'payment_review', 'financing_review'].includes(r.status)).length;
@@ -48,8 +74,30 @@ function Orders({ p }: { p: Partner }) {
       </div>
       {rows.some((r) => r.placeholder) && <Card tone="warn"><p className="sm">{t('Sebagian angka komisi memakai pajak sementara (placeholder) dan akan berubah setelah angka pajak resmi ditetapkan.')}</p></Card>}
       <Card title={t('Pesanan')}>
-        {rows.length === 0 ? <Empty>{t('Belum ada pesanan.')}</Empty> :
-          <Table head={['Kode', 'Pembeli', 'Paket', 'Berangkat', 'Total', 'Komisi', 'Status']} rows={rows.map((r) => [r.code, r.buyer, t(r.pkg), fdate(r.date), rp(r.total), <b key="c">{rp(r.commission)}{r.paidOut && <> <Badge tone="green">{t('Dibayar')}</Badge></>}</b>, <OrderBadge key="s" s={r.status} />])} />}
+        {rows.length === 0 ? <Empty>{t('Belum ada pesanan.')}</Empty> : (
+          <div className="tbl">
+            <table>
+              <thead><tr>{['Kode', 'Pembeli', 'Paket', 'Berangkat', 'Total', 'Komisi', 'Status', ''].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+              <tbody>
+                {rows.map((r) => (
+                  <>
+                    <tr key={r.id}>
+                      <td data-l="Kode">{r.code}</td>
+                      <td data-l="Pembeli">{r.buyer}</td>
+                      <td data-l="Paket">{t(r.pkg)}</td>
+                      <td data-l="Berangkat">{fdate(r.date)}</td>
+                      <td data-l="Total">{rp(r.total)}</td>
+                      <td data-l="Komisi"><b>{rp(r.commission)}</b>{r.paidOut && <> <Badge tone="green">{t('Dibayar')}</Badge></>}</td>
+                      <td data-l="Status"><OrderBadge s={r.status} /></td>
+                      <td><button className="comm-expand-btn" onClick={() => toggle(r.id)}>{expanded.has(r.id) ? t('Tutup rincian') : t('Lihat rincian')}</button></td>
+                    </tr>
+                    {expanded.has(r.id) && <tr key={r.id + '-d'}><td colSpan={8} style={{ padding: 0 }}><CommDetail r={r} /></td></tr>}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <p className="sm mut">{t('Komisi dibayar oleh Maidaa setelah pembayaran penuh diterima.')}</p>
       </Card>
     </>

@@ -305,11 +305,17 @@ export class Api {
   /** Partner view: own orders with commission only. No base price, margin or platform share. */
   commissions(pid: string) {
     if (!this.canAdmin(pid)) this.staff(); this.expire();
-    return this.s.orders.filter((o) => o.partnerId === pid).map((o) => ({
-      id: o.id, code: o.code, status: o.status, pax: o.pax, total: o.total, commission: o.money.partnerPayout, placeholder: o.money.placeholder,
-      buyer: this.s.members.find((m) => m.id === o.memberId)?.name ?? '', date: this.s.departures.find((d) => d.id === o.departureId)?.date ?? '',
-      pkg: this.s.packages.find((p) => p.id === o.packageId)?.name ?? '', paidOut: this.s.ledger.some((l) => l.orderId === o.id && l.party === 'partner' && l.status === 'paid'),
-    }));
+    return this.s.orders.filter((o) => o.partnerId === pid).map((o) => {
+      const withheld = o.money.partnerShare - o.money.partnerPayout;
+      return {
+        id: o.id, code: o.code, status: o.status, pax: o.pax, total: o.total, commission: o.money.partnerPayout, placeholder: o.money.placeholder,
+        buyer: this.s.members.find((m) => m.id === o.memberId)?.name ?? '', date: this.s.departures.find((d) => d.id === o.departureId)?.date ?? '',
+        pkg: this.s.packages.find((p) => p.id === o.packageId)?.name ?? '', paidOut: this.s.ledger.some((l) => l.orderId === o.id && l.party === 'partner' && l.status === 'paid'),
+        // Commission breakdown (partner-visible only — no HPP, gross, net, or platform share)
+        partnerShare: o.money.partnerShare, withheld,
+        unit: o.unit, discountPerPax: o.discountPerPax, method: o.method, tenor: o.tenor,
+      };
+    });
   }
   partnerLedger(pid: string) { if (!this.canAdmin(pid)) this.staff(); return this.s.ledger.filter((l) => l.party === 'partner' && l.partnerId === pid); }
   codes(pid: string) { if (!this.canAdmin(pid)) this.staff(); return this.s.codes.filter((c) => c.partnerId === pid); }
